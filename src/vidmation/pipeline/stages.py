@@ -322,22 +322,26 @@ def stage_video_assembly(ctx: PipelineContext, settings: Settings) -> None:
 
     logger.info("[assembly] Assembling final video")
 
-    # Lazy import keeps heavy FFmpeg tooling out of module-load time
-    from vidmation.services.compositor import compose_video  # type: ignore[import-not-found]
+    from vidmation.video.assembler import VideoAssembler
+    from vidmation.utils.files import get_work_dir
 
     output_path = get_output_path(ctx.video_id, "final.mp4")
+    work_dir = get_work_dir(ctx.video_id)
 
-    compose_result = compose_video(
-        voiceover_path=ctx.voiceover_path,
-        media_clips=ctx.media_clips,
-        word_timestamps=ctx.word_timestamps,
-        music_path=ctx.music_path,
+    assembler = VideoAssembler(
         video_config=ctx.channel_profile.video,
-        format=ctx.format,
-        output_path=output_path,
+        work_dir=work_dir,
     )
 
-    ctx.final_video_path = Path(compose_result["path"])
+    sections = ctx.script.get("sections", []) if ctx.script else []
+
+    ctx.final_video_path = assembler.assemble(
+        sections=sections,
+        voiceover_path=ctx.voiceover_path,
+        word_timestamps=ctx.word_timestamps or [],
+        music_path=ctx.music_path,
+        output_path=output_path,
+    )
 
     logger.info("[assembly] Final video saved to %s", ctx.final_video_path)
 
