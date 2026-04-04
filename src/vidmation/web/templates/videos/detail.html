@@ -1,90 +1,95 @@
 {% extends "base.html" %}
 {% block title %}{{ video.title or 'Video' }} - VIDMATION{% endblock %}
-{% block nav_videos %}bg-gray-800 text-white{% endblock %}
+{% block nav_videos %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<a href="/videos" class="text-[#666] hover:text-[#999] transition-colors">Videos</a>
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium truncate max-w-[200px]">{{ video.title or 'Detail' }}</span>
+{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Back link -->
-    <a href="/videos" class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-white">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Back to Videos
-    </a>
-
-    <!-- Header -->
+    {# Header #}
     <div class="flex items-start justify-between">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight">{{ video.title or video.topic_prompt[:80] }}</h1>
+            <a href="/videos" class="inline-flex items-center gap-1 text-xs text-[#666] hover:text-[#999] transition-colors mb-3">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Back to Videos
+            </a>
+            <h1 class="text-2xl font-bold tracking-[-0.01em] text-white">{{ video.title or video.topic_prompt[:80] }}</h1>
             <div class="mt-2 flex items-center gap-3">
-                <span class="px-2.5 py-1 rounded-lg text-xs font-medium
-                    {% if video.status.value == 'uploaded' %}bg-green-900/50 text-green-400
-                    {% elif video.status.value == 'generating' %}bg-brand-900/50 text-brand-400
-                    {% elif video.status.value == 'failed' %}bg-red-900/50 text-red-400
-                    {% elif video.status.value == 'ready' %}bg-yellow-900/50 text-yellow-400
-                    {% else %}bg-gray-800 text-gray-400{% endif %}">
-                    {{ video.status.value|upper }}
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full
+                        {% if video.status.value == 'uploaded' %}bg-[#10a37f]
+                        {% elif video.status.value == 'generating' %}bg-[#6366f1]
+                        {% elif video.status.value == 'failed' %}bg-[#ef4444]
+                        {% elif video.status.value == 'ready' %}bg-[#f59e0b]
+                        {% else %}bg-[#666]{% endif %}"></span>
+                    <span class="text-[#999]">{{ video.status.value }}</span>
                 </span>
-                <span class="text-sm text-gray-400">{{ video.format.value|title }}</span>
-                <span class="text-sm text-gray-400">{{ video.channel.name }}</span>
+                <span class="text-xs text-[#666]">{{ video.format.value|title }}</span>
+                <span class="text-xs text-[#666]">{{ video.channel.name }}</span>
             </div>
         </div>
         {% if video.youtube_url %}
-        <a href="{{ video.youtube_url }}" target="_blank" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+        <a href="{{ video.youtube_url }}" target="_blank" class="rounded-xl border border-white/[0.1] px-4 py-2 text-sm font-medium text-[#ececec] hover:bg-white/[0.04] transition-colors">
             View on YouTube
         </a>
         {% endif %}
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main info -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Topic -->
-            <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-                <h3 class="text-sm font-medium text-gray-400 mb-2">Topic Prompt</h3>
-                <p class="text-white">{{ video.topic_prompt }}</p>
+        {# Main info #}
+        <div class="lg:col-span-2 space-y-4">
+            {# Topic #}
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-3">Topic Prompt</h3>
+                <p class="text-sm text-[#ececec] leading-relaxed">{{ video.topic_prompt }}</p>
             </div>
 
-            <!-- Description -->
+            {# Description #}
             {% if video.description %}
-            <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-                <h3 class="text-sm font-medium text-gray-400 mb-2">Description</h3>
-                <p class="text-gray-300 whitespace-pre-line">{{ video.description }}</p>
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-3">Description</h3>
+                <p class="text-sm text-[#999] whitespace-pre-line leading-relaxed">{{ video.description }}</p>
             </div>
             {% endif %}
 
-            <!-- Script -->
+            {# Script #}
             {% if video.script_json %}
-            <div class="rounded-xl bg-gray-900 border border-gray-800 p-5" x-data="{ open: false }">
-                <button @click="open = !open" class="flex items-center justify-between w-full">
-                    <h3 class="text-sm font-medium text-gray-400">Script</h3>
-                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] overflow-hidden" x-data="{ open: false }">
+                <button @click="open = !open" class="flex items-center justify-between w-full px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                    <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider">Script</h3>
+                    <svg class="w-4 h-4 text-[#666] transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-                <div x-show="open" x-cloak class="mt-3">
-                    <pre class="text-xs text-gray-300 bg-gray-950 rounded-lg p-4 overflow-x-auto">{{ video.script_json | tojson(indent=2) }}</pre>
+                <div x-show="open" x-cloak class="px-6 pb-6">
+                    <pre class="text-xs text-[#999] bg-[#0d0d0d] rounded-xl p-4 overflow-x-auto font-mono leading-relaxed">{{ video.script_json | tojson(indent=2) }}</pre>
                 </div>
             </div>
             {% endif %}
 
-            <!-- Jobs -->
+            {# Jobs #}
             {% if video.jobs %}
-            <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-                <h3 class="text-sm font-medium text-gray-400 mb-3">Jobs</h3>
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-4">Jobs</h3>
                 <div class="space-y-2">
                     {% for job in video.jobs %}
-                    <div class="flex items-center justify-between p-3 rounded-lg bg-gray-950">
-                        <div>
-                            <span class="text-sm font-medium">{{ job.job_type.value }}</span>
-                            <span class="text-xs text-gray-500 ml-2">{{ job.current_stage }}</span>
+                    <div class="flex items-center justify-between py-2.5 border-b border-white/[0.04] last:border-0">
+                        <div class="flex items-center gap-3">
+                            <span class="w-1.5 h-1.5 rounded-full
+                                {% if job.status.value == 'completed' %}bg-[#10a37f]
+                                {% elif job.status.value == 'running' %}bg-[#6366f1]
+                                {% elif job.status.value == 'failed' %}bg-[#ef4444]
+                                {% elif job.status.value == 'queued' %}bg-[#f59e0b]
+                                {% else %}bg-[#666]{% endif %}"></span>
+                            <span class="text-sm font-medium text-[#ececec]">{{ job.job_type.value }}</span>
+                            <span class="text-xs text-[#666]">{{ job.current_stage }}</span>
                         </div>
                         <div class="flex items-center gap-3">
-                            <span class="text-xs text-gray-400">{{ job.progress_pct }}%</span>
-                            <span class="px-2 py-0.5 rounded text-xs
-                                {% if job.status.value == 'completed' %}bg-green-900/50 text-green-400
-                                {% elif job.status.value == 'running' %}bg-brand-900/50 text-brand-400
-                                {% elif job.status.value == 'failed' %}bg-red-900/50 text-red-400
-                                {% elif job.status.value == 'queued' %}bg-yellow-900/50 text-yellow-400
-                                {% else %}bg-gray-800 text-gray-400{% endif %}">
-                                {{ job.status.value }}
-                            </span>
+                            <span class="text-xs text-[#666]">{{ job.progress_pct }}%</span>
+                            <span class="text-xs text-[#999]">{{ job.status.value }}</span>
                         </div>
                     </div>
                     {% endfor %}
@@ -93,54 +98,54 @@
             {% endif %}
         </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-            <!-- Metadata -->
-            <div class="rounded-xl bg-gray-900 border border-gray-800 p-5 space-y-4">
-                <h3 class="text-sm font-medium text-gray-400">Details</h3>
+        {# Sidebar #}
+        <div class="space-y-4">
+            {# Metadata #}
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-4">Details</h3>
                 <div class="space-y-3 text-sm">
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Duration</span>
-                        <span class="text-white">
+                        <span class="text-[#666]">Duration</span>
+                        <span class="text-[#ececec]">
                             {% if video.duration_seconds %}
                                 {{ (video.duration_seconds // 60)|int }}:{{ '%02d' % (video.duration_seconds % 60)|int }}
                             {% else %}-{% endif %}
                         </span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Format</span>
-                        <span class="text-white capitalize">{{ video.format.value }}</span>
+                        <span class="text-[#666]">Format</span>
+                        <span class="text-[#ececec] capitalize">{{ video.format.value }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Created</span>
-                        <span class="text-white">{{ video.created_at.strftime('%b %d, %Y %H:%M') if video.created_at else '-' }}</span>
+                        <span class="text-[#666]">Created</span>
+                        <span class="text-[#ececec]">{{ video.created_at.strftime('%b %d, %Y %H:%M') if video.created_at else '-' }}</span>
                     </div>
                     {% if video.youtube_video_id %}
                     <div class="flex justify-between">
-                        <span class="text-gray-400">YouTube ID</span>
-                        <span class="text-white font-mono text-xs">{{ video.youtube_video_id }}</span>
+                        <span class="text-[#666]">YouTube ID</span>
+                        <span class="text-[#ececec] font-mono text-xs">{{ video.youtube_video_id }}</span>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Tags -->
+            {# Tags #}
             {% if video.tags %}
-            <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-                <h3 class="text-sm font-medium text-gray-400 mb-3">Tags</h3>
-                <div class="flex flex-wrap gap-2">
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-3">Tags</h3>
+                <div class="flex flex-wrap gap-1.5">
                     {% for tag in video.tags %}
-                    <span class="px-2 py-1 rounded-md bg-gray-800 text-xs text-gray-300">{{ tag }}</span>
+                    <span class="px-2.5 py-1 rounded-full bg-white/[0.06] text-[11px] font-medium text-[#999]">{{ tag }}</span>
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
 
-            <!-- Error -->
+            {# Error #}
             {% if video.error_message %}
-            <div class="rounded-xl bg-red-900/20 border border-red-800 p-5">
-                <h3 class="text-sm font-medium text-red-400 mb-2">Error</h3>
-                <p class="text-xs text-red-300 font-mono">{{ video.error_message }}</p>
+            <div class="rounded-2xl bg-[#ef4444]/5 border border-[#ef4444]/20 p-6">
+                <h3 class="text-xs font-medium text-[#ef4444] uppercase tracking-wider mb-2">Error</h3>
+                <p class="text-xs text-[#ef4444]/80 font-mono leading-relaxed">{{ video.error_message }}</p>
             </div>
             {% endif %}
         </div>

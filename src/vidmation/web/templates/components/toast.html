@@ -1,17 +1,7 @@
-{# ============================================================
-   Toast Notification System
-   Include in base.html: {% include "components/toast.html" %}
-
-   Usage from anywhere:
-     $dispatch('toast', { message: 'Video generated!', type: 'success' })
-
-   Types: success, error, warning, info
-   Toasts auto-dismiss after 5s and are stackable.
-   ============================================================ #}
-
+{# Toast Notification System #}
 <div x-data="toastSystem()"
      @toast.window="addToast($event.detail)"
-     class="fixed top-4 right-4 z-[100] flex flex-col items-end gap-3 pointer-events-none"
+     class="fixed top-4 right-4 z-[100] flex flex-col items-end gap-2.5 pointer-events-none"
      aria-live="polite"
      aria-label="Notifications">
 
@@ -19,66 +9,46 @@
     <div x-show="toast.visible"
          x-transition:enter="toast-enter"
          x-transition:leave="toast-leave"
-         class="pointer-events-auto max-w-sm w-full glass-card rounded-xl px-4 py-3.5 flex items-start gap-3"
+         class="pointer-events-auto max-w-sm w-full rounded-xl bg-[#1a1a1a] border px-4 py-3 flex items-start gap-3 relative overflow-hidden"
          :class="{
-           'border-green-500/20': toast.type === 'success',
-           'border-red-500/20': toast.type === 'error',
-           'border-yellow-500/20': toast.type === 'warning',
-           'border-brand-500/20': toast.type === 'info'
+           'border-[#10a37f]/20': toast.type === 'success',
+           'border-[#ef4444]/20': toast.type === 'error',
+           'border-[#f59e0b]/20': toast.type === 'warning',
+           'border-[#6366f1]/20': toast.type === 'info'
          }"
          role="alert">
 
-      {# Icon #}
       <div class="flex-shrink-0 mt-0.5">
-        {# Success #}
         <template x-if="toast.type === 'success'">
-          <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+          <svg class="w-4 h-4 text-[#10a37f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </template>
-        {# Error #}
         <template x-if="toast.type === 'error'">
-          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+          <svg class="w-4 h-4 text-[#ef4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </template>
-        {# Warning #}
         <template x-if="toast.type === 'warning'">
-          <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-          </svg>
+          <svg class="w-4 h-4 text-[#f59e0b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
         </template>
-        {# Info #}
         <template x-if="toast.type === 'info'">
-          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+          <svg class="w-4 h-4 text-[#6366f1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </template>
       </div>
 
-      {# Content #}
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-white leading-snug" x-text="toast.message"></p>
-        <p x-show="toast.detail" class="mt-0.5 text-xs text-gray-400" x-text="toast.detail"></p>
+        <p class="text-sm font-medium text-[#ececec] leading-snug" x-text="toast.message"></p>
+        <p x-show="toast.detail" class="mt-0.5 text-xs text-[#666]" x-text="toast.detail"></p>
       </div>
 
-      {# Dismiss button #}
-      <button @click="removeToast(toast.id)"
-              class="flex-shrink-0 text-gray-500 hover:text-gray-300 transition-colors"
-              aria-label="Dismiss notification">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
+      <button @click="removeToast(toast.id)" class="flex-shrink-0 text-[#666] hover:text-[#999] transition-colors" aria-label="Dismiss">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
 
-      {# Auto-dismiss progress bar #}
-      <div class="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl overflow-hidden">
+      <div class="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
         <div class="h-full transition-all ease-linear"
              :class="{
-               'bg-green-500/40': toast.type === 'success',
-               'bg-red-500/40': toast.type === 'error',
-               'bg-yellow-500/40': toast.type === 'warning',
-               'bg-indigo-500/40': toast.type === 'info'
+               'bg-[#10a37f]/30': toast.type === 'success',
+               'bg-[#ef4444]/30': toast.type === 'error',
+               'bg-[#f59e0b]/30': toast.type === 'warning',
+               'bg-[#6366f1]/30': toast.type === 'info'
              }"
              :style="'width: ' + toast.progress + '%; transition-duration: 100ms;'">
         </div>
@@ -92,47 +62,20 @@ function toastSystem() {
   return {
     toasts: [],
     nextId: 0,
-
     addToast({ message, type = 'info', detail = '', duration = 5000 }) {
       const id = this.nextId++;
-      const toast = {
-        id,
-        message,
-        type,
-        detail,
-        visible: true,
-        progress: 100,
-      };
+      const toast = { id, message, type, detail, visible: true, progress: 100 };
       this.toasts.push(toast);
-
-      // Animate progress bar
       const interval = setInterval(() => {
         const t = this.toasts.find(t => t.id === id);
-        if (t) {
-          t.progress = Math.max(0, t.progress - (100 / (duration / 100)));
-        }
+        if (t) t.progress = Math.max(0, t.progress - (100 / (duration / 100)));
       }, 100);
-
-      // Auto-dismiss
-      setTimeout(() => {
-        clearInterval(interval);
-        this.removeToast(id);
-      }, duration);
-
-      // Limit stack to 5
-      if (this.toasts.length > 5) {
-        this.removeToast(this.toasts[0].id);
-      }
+      setTimeout(() => { clearInterval(interval); this.removeToast(id); }, duration);
+      if (this.toasts.length > 5) this.removeToast(this.toasts[0].id);
     },
-
     removeToast(id) {
       const toast = this.toasts.find(t => t.id === id);
-      if (toast) {
-        toast.visible = false;
-        setTimeout(() => {
-          this.toasts = this.toasts.filter(t => t.id !== id);
-        }, 300);
-      }
+      if (toast) { toast.visible = false; setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 300); }
     }
   };
 }

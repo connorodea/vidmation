@@ -1,155 +1,116 @@
 {% extends "base.html" %}
 {% block title %}Performance - VIDMATION{% endblock %}
-{% block nav_analytics %}bg-gray-800 text-white{% endblock %}
+{% block nav_analytics %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<a href="/analytics" class="text-[#666] hover:text-[#999] transition-colors">Analytics</a>
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Performance</span>
+{% endblock %}
 
 {% block content %}
-<div class="space-y-8">
-    <!-- Header -->
+<div class="space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight">Video Performance</h1>
-            <p class="mt-1 text-sm text-gray-400">YouTube analytics and content insights</p>
+            <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Performance</h1>
+            <p class="mt-1 text-sm text-[#666]">YouTube analytics and content insights</p>
         </div>
-        <div class="flex gap-3">
-            <a href="/analytics" class="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
-                Overview
-            </a>
-            <a href="/analytics/costs" class="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
-                Costs
-            </a>
+        <div class="flex gap-2">
+            <a href="/analytics" class="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors">Overview</a>
+            <a href="/analytics/costs" class="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors">Costs</a>
         </div>
     </div>
 
-    <!-- Channel Filter -->
-    <div class="flex gap-4 items-center">
-        <div class="flex rounded-lg border border-gray-700 overflow-hidden">
-            <a href="/analytics/performance"
-               class="px-4 py-2 text-sm font-medium {% if not channel_id %}bg-brand-600 text-white{% else %}text-gray-300 hover:bg-gray-800{% endif %} transition-colors">
-                All Channels
-            </a>
-            {% for ch in channels %}
-            <a href="/analytics/performance?channel_id={{ ch.id }}"
-               class="px-4 py-2 text-sm font-medium border-l border-gray-700 {% if channel_id == ch.id %}bg-brand-600 text-white{% else %}text-gray-300 hover:bg-gray-800{% endif %} transition-colors">
-                {{ ch.name }}
-            </a>
-            {% endfor %}
+    {# Channel Filter #}
+    <div class="flex gap-1.5">
+        <a href="/analytics/performance" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors {% if not channel_id %}bg-white/[0.08] text-white{% else %}text-[#666] hover:text-[#999] hover:bg-white/[0.04]{% endif %}">All Channels</a>
+        {% for ch in channels %}
+        <a href="/analytics/performance?channel_id={{ ch.id }}" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors {% if channel_id == ch.id %}bg-white/[0.08] text-white{% else %}text-[#666] hover:text-[#999] hover:bg-white/[0.04]{% endif %}">{{ ch.name }}</a>
+        {% endfor %}
+    </div>
+
+    {# Stats #}
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Views</p>
+            <p class="mt-3 text-2xl font-bold text-white">{{ "{:,}".format(performance.total_views) }}</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Likes</p>
+            <p class="mt-3 text-2xl font-bold text-[#10a37f]">{{ "{:,}".format(performance.total_likes) }}</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Watch Time</p>
+            <p class="mt-3 text-2xl font-bold text-white">{{ "%.1f"|format(performance.total_watch_time_hours) }}h</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Subs Gained</p>
+            <p class="mt-3 text-2xl font-bold text-[#f59e0b]">+{{ "{:,}".format(performance.total_subscriber_gain) }}</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Avg Views</p>
+            <p class="mt-3 text-2xl font-bold text-white">{{ "{:,}".format(performance.avg_views_per_video) }}</p>
         </div>
     </div>
 
-    <!-- Performance Stats -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Total Views</p>
-            <p class="mt-2 text-3xl font-bold text-white">{{ "{:,}".format(performance.total_views) }}</p>
-        </div>
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Total Likes</p>
-            <p class="mt-2 text-3xl font-bold text-green-400">{{ "{:,}".format(performance.total_likes) }}</p>
-        </div>
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Watch Time</p>
-            <p class="mt-2 text-3xl font-bold text-brand-500">{{ "%.1f"|format(performance.total_watch_time_hours) }}h</p>
-        </div>
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Subscribers Gained</p>
-            <p class="mt-2 text-3xl font-bold text-yellow-400">+{{ "{:,}".format(performance.total_subscriber_gain) }}</p>
-        </div>
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Avg Views/Video</p>
-            <p class="mt-2 text-3xl font-bold text-white">{{ "{:,}".format(performance.avg_views_per_video) }}</p>
-        </div>
-    </div>
-
-    <!-- Efficiency Metrics -->
+    {# Efficiency #}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Cost per View</p>
-            <p class="mt-2 text-3xl font-bold text-white">
-                {% if efficiency.overall_cost_per_view is not none %}
-                ${{ "%.4f"|format(efficiency.overall_cost_per_view) }}
-                {% else %}
-                --
-                {% endif %}
-            </p>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Cost per View</p>
+            <p class="mt-3 text-2xl font-bold text-white">{% if efficiency.overall_cost_per_view is not none %}${{ "%.4f"|format(efficiency.overall_cost_per_view) }}{% else %}--{% endif %}</p>
         </div>
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Cost per Subscriber</p>
-            <p class="mt-2 text-3xl font-bold text-green-400">
-                {% if efficiency.overall_cost_per_subscriber is not none %}
-                ${{ "%.2f"|format(efficiency.overall_cost_per_subscriber) }}
-                {% else %}
-                --
-                {% endif %}
-            </p>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Cost per Sub</p>
+            <p class="mt-3 text-2xl font-bold text-[#10a37f]">{% if efficiency.overall_cost_per_subscriber is not none %}${{ "%.2f"|format(efficiency.overall_cost_per_subscriber) }}{% else %}--{% endif %}</p>
         </div>
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <p class="text-sm font-medium text-gray-400">Total Production Cost</p>
-            <p class="mt-2 text-3xl font-bold text-brand-500">${{ "%.2f"|format(efficiency.total_cost_usd) }}</p>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Production Cost</p>
+            <p class="mt-3 text-2xl font-bold text-white">${{ "%.2f"|format(efficiency.total_cost_usd) }}</p>
         </div>
     </div>
 
-    <!-- Charts Row -->
+    {# Charts #}
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Views per Video -->
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <h3 class="text-sm font-medium text-gray-400 mb-4">Top Videos by Views</h3>
-            <div class="relative" style="height: 300px;">
-                <canvas id="viewsChart"></canvas>
-            </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <h3 class="text-sm font-semibold text-white mb-4">Top Videos by Views</h3>
+            <div class="relative" style="height: 280px;"><canvas id="viewsChart"></canvas></div>
         </div>
-
-        <!-- Best Posting Times -->
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <h3 class="text-sm font-medium text-gray-400 mb-4">Best Posting Hours (avg views)</h3>
-            <div class="relative" style="height: 300px;">
-                <canvas id="hoursChart"></canvas>
-            </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <h3 class="text-sm font-semibold text-white mb-4">Best Posting Hours</h3>
+            <div class="relative" style="height: 280px;"><canvas id="hoursChart"></canvas></div>
         </div>
     </div>
 
-    <!-- Best Performing Videos Table -->
+    {# Video Table #}
     {% if performance.videos %}
-    <div class="rounded-xl bg-gray-900 border border-gray-800 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-800">
-            <h3 class="text-sm font-medium text-gray-300">Video Performance ({{ performance.total_videos_tracked }} tracked)</h3>
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] overflow-hidden">
+        <div class="px-6 py-4 border-b border-white/[0.06]">
+            <h3 class="text-sm font-semibold text-white">Video Performance ({{ performance.total_videos_tracked }} tracked)</h3>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-gray-800/50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Video</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Views</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Likes</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Comments</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Watch Time</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Avg View %</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">CTR</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Impressions</th>
-                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Subs +</th>
+                <thead>
+                    <tr class="border-b border-white/[0.06]">
+                        <th class="px-4 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Video</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Views</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Likes</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Watch Time</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Avg View %</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">CTR</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Subs +</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-800">
+                <tbody>
                     {% for v in performance.videos %}
-                    <tr class="hover:bg-gray-800/30 cursor-pointer" onclick="window.location='/videos/{{ v.video_id }}'">
-                        <td class="px-4 py-3 font-medium text-gray-200 max-w-xs truncate">{{ v.title }}</td>
-                        <td class="px-4 py-3 text-right text-gray-300">{{ "{:,}".format(v.views) }}</td>
-                        <td class="px-4 py-3 text-right text-gray-300">{{ "{:,}".format(v.likes) }}</td>
-                        <td class="px-4 py-3 text-right text-gray-300">{{ "{:,}".format(v.comments) }}</td>
-                        <td class="px-4 py-3 text-right text-gray-300">{{ "%.1f"|format(v.watch_time_hours) }}h</td>
-                        <td class="px-4 py-3 text-right">
-                            <span class="{% if v.avg_view_percentage >= 50 %}text-green-400{% elif v.avg_view_percentage >= 30 %}text-yellow-400{% else %}text-red-400{% endif %}">
-                                {{ "%.1f"|format(v.avg_view_percentage) }}%
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <span class="{% if v.click_through_rate >= 5 %}text-green-400{% elif v.click_through_rate >= 2 %}text-yellow-400{% else %}text-gray-400{% endif %}">
-                                {{ "%.1f"|format(v.click_through_rate) }}%
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-right text-gray-300">{{ "{:,}".format(v.impressions) }}</td>
-                        <td class="px-4 py-3 text-right {% if v.subscriber_gain > 0 %}text-green-400{% else %}text-gray-400{% endif %}">
-                            {% if v.subscriber_gain > 0 %}+{% endif %}{{ v.subscriber_gain }}
-                        </td>
+                    <tr class="border-t border-white/[0.04] hover:bg-white/[0.02] cursor-pointer transition-colors" onclick="window.location='/videos/{{ v.video_id }}'">
+                        <td class="px-4 py-3 font-medium text-[#ececec] max-w-xs truncate">{{ v.title }}</td>
+                        <td class="px-4 py-3 text-right text-[#999]">{{ "{:,}".format(v.views) }}</td>
+                        <td class="px-4 py-3 text-right text-[#999]">{{ "{:,}".format(v.likes) }}</td>
+                        <td class="px-4 py-3 text-right text-[#999]">{{ "%.1f"|format(v.watch_time_hours) }}h</td>
+                        <td class="px-4 py-3 text-right {% if v.avg_view_percentage >= 50 %}text-[#10a37f]{% elif v.avg_view_percentage >= 30 %}text-[#f59e0b]{% else %}text-[#ef4444]{% endif %}">{{ "%.1f"|format(v.avg_view_percentage) }}%</td>
+                        <td class="px-4 py-3 text-right {% if v.click_through_rate >= 5 %}text-[#10a37f]{% elif v.click_through_rate >= 2 %}text-[#f59e0b]{% else %}text-[#666]{% endif %}">{{ "%.1f"|format(v.click_through_rate) }}%</td>
+                        <td class="px-4 py-3 text-right {% if v.subscriber_gain > 0 %}text-[#10a37f]{% else %}text-[#666]{% endif %}">{% if v.subscriber_gain > 0 %}+{% endif %}{{ v.subscriber_gain }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -157,25 +118,24 @@
         </div>
     </div>
     {% else %}
-    <div class="rounded-xl bg-gray-900 border border-gray-800 p-8 text-center">
-        <p class="text-gray-400">No video analytics data yet.</p>
-        <p class="mt-2 text-sm text-gray-500">Upload videos to YouTube and sync analytics to see performance data.</p>
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] px-6 py-12 text-center">
+        <p class="text-sm text-[#999]">No video analytics data yet.</p>
+        <p class="mt-1 text-xs text-[#666]">Upload videos to YouTube and sync analytics to see performance data.</p>
     </div>
     {% endif %}
 
-    <!-- Content Insights -->
+    {# Content Insights #}
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Best Posting Days -->
         {% if content.best_posting_days %}
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <h3 class="text-sm font-medium text-gray-400 mb-4">Best Posting Days</h3>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <h3 class="text-sm font-semibold text-white mb-4">Best Posting Days</h3>
             <div class="space-y-3">
                 {% for day in content.best_posting_days %}
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-200">{{ day.day }}</span>
+                <div class="flex items-center justify-between py-1">
+                    <span class="text-sm text-[#ececec]">{{ day.day }}</span>
                     <div class="flex items-center gap-3">
-                        <span class="text-xs text-gray-500">{{ day.videos_posted }} videos</span>
-                        <span class="text-sm font-medium text-white">{{ "{:,}".format(day.avg_views) }} avg views</span>
+                        <span class="text-xs text-[#666]">{{ day.videos_posted }} videos</span>
+                        <span class="text-sm font-medium text-white">{{ "{:,}".format(day.avg_views) }} avg</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -183,22 +143,17 @@
         </div>
         {% endif %}
 
-        <!-- Most Efficient Videos -->
         {% if efficiency.most_efficient %}
-        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
-            <h3 class="text-sm font-medium text-gray-400 mb-4">Most Efficient Videos (lowest cost/view)</h3>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <h3 class="text-sm font-semibold text-white mb-4">Most Efficient Videos</h3>
             <div class="space-y-3">
                 {% for v in efficiency.most_efficient %}
-                <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-200 truncate max-w-[200px]">{{ v.title }}</span>
+                <div class="flex items-center justify-between py-1">
+                    <span class="text-sm text-[#ececec] truncate max-w-[200px]">{{ v.title }}</span>
                     <div class="flex items-center gap-3">
-                        <span class="text-xs text-gray-500">{{ "{:,}".format(v.views) }} views</span>
-                        <span class="text-sm font-medium {% if v.cost_per_view is not none and v.cost_per_view < 0.01 %}text-green-400{% else %}text-white{% endif %}">
-                            {% if v.cost_per_view is not none %}
-                            ${{ "%.4f"|format(v.cost_per_view) }}/view
-                            {% else %}
-                            --
-                            {% endif %}
+                        <span class="text-xs text-[#666]">{{ "{:,}".format(v.views) }} views</span>
+                        <span class="text-sm font-medium {% if v.cost_per_view is not none and v.cost_per_view < 0.01 %}text-[#10a37f]{% else %}text-white{% endif %}">
+                            {% if v.cost_per_view is not none %}${{ "%.4f"|format(v.cost_per_view) }}/view{% else %}--{% endif %}
                         </span>
                     </div>
                 </div>
@@ -209,110 +164,50 @@
     </div>
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
-    Chart.defaults.color = '#9ca3af';
+    Chart.defaults.color = '#666666';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.04)';
 
-    // -- Top Videos by Views --
     const topVideos = {{ performance.top_5_by_views | tojson }};
     if (topVideos.length > 0) {
-        const labels = topVideos.map(v => v.title.length > 30 ? v.title.slice(0, 30) + '...' : v.title);
-        const views = topVideos.map(v => v.views);
-        const likes = topVideos.map(v => v.likes);
-
         new Chart(document.getElementById('viewsChart'), {
             type: 'bar',
             data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Views',
-                        data: views,
-                        backgroundColor: '#6366f1',
-                        borderRadius: 4,
-                    },
-                    {
-                        label: 'Likes',
-                        data: likes,
-                        backgroundColor: '#22c55e',
-                        borderRadius: 4,
-                    }
-                ]
+                labels: topVideos.map(v => v.title.length > 25 ? v.title.slice(0, 25) + '...' : v.title),
+                datasets: [{ label: 'Views', data: topVideos.map(v => v.views), backgroundColor: '#10a37f', borderRadius: 6 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.x.toLocaleString()}`
-                        }
-                    }
-                },
-                scales: {
-                    x: { grid: { color: '#1f2937' } },
-                    y: {
-                        grid: { display: false },
-                        ticks: { font: { size: 11 } }
-                    }
-                }
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a1a1a', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1, cornerRadius: 8, padding: 12 } },
+                scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
             }
         });
     }
 
-    // -- Best Posting Hours --
     const hoursData = {{ content.all_hour_performance | tojson }};
     if (hoursData.length > 0) {
-        // Fill all 24 hours
         const hourMap = {};
         hoursData.forEach(h => { hourMap[h.hour] = h.avg_views; });
         const allHours = Array.from({length: 24}, (_, i) => i);
-        const hourLabels = allHours.map(h => h.toString().padStart(2, '0') + ':00');
         const hourViews = allHours.map(h => hourMap[h] || 0);
+        const max = Math.max(...hourViews);
 
         new Chart(document.getElementById('hoursChart'), {
             type: 'bar',
             data: {
-                labels: hourLabels,
+                labels: allHours.map(h => h.toString().padStart(2, '0') + ':00'),
                 datasets: [{
                     label: 'Avg Views',
                     data: hourViews,
-                    backgroundColor: hourViews.map(v => {
-                        const max = Math.max(...hourViews);
-                        const ratio = max > 0 ? v / max : 0;
-                        if (ratio > 0.7) return '#22c55e';
-                        if (ratio > 0.4) return '#eab308';
-                        return '#374151';
-                    }),
-                    borderRadius: 2,
+                    backgroundColor: hourViews.map(v => { const r = max > 0 ? v / max : 0; return r > 0.7 ? '#10a37f' : r > 0.4 ? '#f59e0b' : 'rgba(255,255,255,0.06)'; }),
+                    borderRadius: 4,
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => `${ctx.parsed.y.toLocaleString()} avg views`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: '#1f2937' },
-                        ticks: { maxTicksLimit: 12 }
-                    },
-                    y: {
-                        grid: { color: '#1f2937' },
-                        ticks: {
-                            callback: (v) => v.toLocaleString()
-                        }
-                    }
-                }
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a1a1a', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1, cornerRadius: 8, padding: 12 } },
+                scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } }, y: { grid: { color: 'rgba(255,255,255,0.04)' } } }
             }
         });
     }
