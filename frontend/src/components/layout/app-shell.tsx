@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { CommandPalette } from "@/components/layout/command-palette";
@@ -13,10 +13,8 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  useKeyboardShortcut(
-    { key: "k", meta: true },
-    () => setCommandPaletteOpen(true)
-  );
+  const cmdKCombo = useMemo(() => ({ key: "k", meta: true }), []);
+  useKeyboardShortcut(cmdKCombo, () => setCommandPaletteOpen(true));
 
   return (
     <>

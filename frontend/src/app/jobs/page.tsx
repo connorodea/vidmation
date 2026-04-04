@@ -65,8 +65,8 @@ export default function JobsPage() {
     }
   }
 
-  const filteredJobs =
-    filter === "all" ? jobs : jobs.filter((j) => j.status === filter);
+  // API already returns filtered results when filter !== "all"
+  const filteredJobs = jobs;
 
   return (
     <div className="min-h-screen">
