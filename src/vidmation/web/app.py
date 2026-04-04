@@ -38,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(api.router, prefix="/api", tags=["api"])
     app.include_router(voices.router, prefix="/voices", tags=["voices"])
     app.include_router(analytics.router, tags=["analytics"])
+    app.include_router(content.router, prefix="/content", tags=["content"])
 
     # --- Public REST API v1 (JSON, API-key auth) ---
     app.include_router(api_v1_router, prefix="/api/v1")
