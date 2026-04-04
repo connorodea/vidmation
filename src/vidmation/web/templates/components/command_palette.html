@@ -1,0 +1,315 @@
+{# ============================================================
+   Command Palette (Cmd+K / Ctrl+K)
+   Include in base.html: {% include "components/command_palette.html" %}
+
+   - Search across videos, channels, jobs
+   - Quick actions: New Video, View Analytics, Start Worker
+   - Recent items section
+   - Full keyboard navigation (arrows, enter, escape)
+   ============================================================ #}
+
+<div x-data="commandPalette()"
+     @keydown.window="handleGlobalKeydown($event)"
+     @toggle-command-palette.window="toggle()"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-[90] flex items-start justify-center pt-[15vh]"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Command palette">
+
+  {# Backdrop #}
+  <div @click="close()"
+       x-show="open"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 command-palette-backdrop">
+  </div>
+
+  {# Panel #}
+  <div x-show="open"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+       x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+       class="relative w-full max-w-xl glass rounded-2xl shadow-2xl shadow-black/40 overflow-hidden"
+       @keydown.escape.prevent="close()"
+       @keydown.arrow-down.prevent="moveSelection(1)"
+       @keydown.arrow-up.prevent="moveSelection(-1)"
+       @keydown.enter.prevent="executeSelected()">
+
+    {# Search input #}
+    <div class="flex items-center gap-3 px-5 border-b border-white/[0.06]">
+      <svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input x-ref="searchInput"
+             x-model="query"
+             @input="search()"
+             type="text"
+             placeholder="Search videos, channels, or type a command..."
+             class="flex-1 bg-transparent py-4 text-sm text-white placeholder-gray-500 focus:outline-none"
+             autocomplete="off"
+             aria-label="Search or enter command">
+      <kbd class="hidden sm:inline-flex items-center gap-0.5 rounded-md bg-white/[0.06] px-2 py-1 text-[10px] font-medium text-gray-500">
+        ESC
+      </kbd>
+    </div>
+
+    {# Results #}
+    <div class="max-h-80 overflow-y-auto py-2">
+
+      {# Quick Actions (shown when query is empty) #}
+      <template x-if="query.length === 0">
+        <div>
+          <div class="px-4 py-2">
+            <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Quick Actions</p>
+          </div>
+          <template x-for="(action, index) in quickActions" :key="action.id">
+            <button @click="executeAction(action)"
+                    @mouseenter="selectedIndex = index"
+                    class="w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-colors"
+                    :class="selectedIndex === index ? 'bg-white/[0.06] text-white' : 'text-gray-400 hover:text-white'"
+                    role="option"
+                    :aria-selected="selectedIndex === index">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                   :class="action.iconBg">
+                <span x-html="action.icon"></span>
+              </div>
+              <div class="flex-1 text-left">
+                <span class="font-medium" x-text="action.label"></span>
+                <span class="ml-2 text-xs text-gray-600" x-text="action.hint"></span>
+              </div>
+              <kbd x-show="action.shortcut"
+                   class="text-[10px] text-gray-600 bg-white/[0.04] px-1.5 py-0.5 rounded"
+                   x-text="action.shortcut">
+              </kbd>
+            </button>
+          </template>
+
+          <div class="px-4 py-2 mt-1 border-t border-white/[0.04]">
+            <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Recent</p>
+          </div>
+          <template x-for="(item, index) in recentItems" :key="'recent-' + item.id">
+            <button @click="navigateTo(item.url)"
+                    @mouseenter="selectedIndex = quickActions.length + index"
+                    class="w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-colors"
+                    :class="selectedIndex === (quickActions.length + index) ? 'bg-white/[0.06] text-white' : 'text-gray-400 hover:text-white'">
+              <div class="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+                <span x-html="item.icon"></span>
+              </div>
+              <div class="flex-1 text-left">
+                <span x-text="item.label"></span>
+              </div>
+              <span class="text-xs text-gray-600" x-text="item.type"></span>
+            </button>
+          </template>
+        </div>
+      </template>
+
+      {# Search Results #}
+      <template x-if="query.length > 0 && results.length > 0">
+        <div>
+          <template x-for="(group, groupIdx) in groupedResults" :key="group.label">
+            <div>
+              <div class="px-4 py-2">
+                <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wider" x-text="group.label"></p>
+              </div>
+              <template x-for="(item, itemIdx) in group.items" :key="item.id">
+                <button @click="navigateTo(item.url)"
+                        @mouseenter="selectedIndex = item._flatIndex"
+                        class="w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-colors"
+                        :class="selectedIndex === item._flatIndex ? 'bg-white/[0.06] text-white' : 'text-gray-400 hover:text-white'">
+                  <div class="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+                    <span x-html="item.icon"></span>
+                  </div>
+                  <div class="flex-1 text-left truncate">
+                    <span x-text="item.label"></span>
+                  </div>
+                  <span class="text-xs text-gray-600" x-text="item.meta"></span>
+                </button>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      {# Empty state #}
+      <template x-if="query.length > 0 && results.length === 0">
+        <div class="px-5 py-8 text-center">
+          <p class="text-sm text-gray-500">No results for "<span x-text="query" class="text-gray-400"></span>"</p>
+          <p class="mt-1 text-xs text-gray-600">Try a different search term or use a quick action</p>
+        </div>
+      </template>
+    </div>
+
+    {# Footer #}
+    <div class="flex items-center justify-between px-5 py-2.5 border-t border-white/[0.06] text-[11px] text-gray-600">
+      <div class="flex items-center gap-3">
+        <span class="flex items-center gap-1">
+          <kbd class="bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">&uarr;</kbd>
+          <kbd class="bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">&darr;</kbd>
+          navigate
+        </span>
+        <span class="flex items-center gap-1">
+          <kbd class="bg-white/[0.04] px-1.5 py-0.5 rounded text-[10px]">&crarr;</kbd>
+          select
+        </span>
+      </div>
+      <span class="flex items-center gap-1">
+        <kbd class="bg-white/[0.04] px-1.5 py-0.5 rounded text-[10px]">esc</kbd>
+        close
+      </span>
+    </div>
+  </div>
+</div>
+
+<script>
+function commandPalette() {
+  const videoIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+  const channelIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>';
+  const jobIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+  const plusIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>';
+  const chartIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
+  const playIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+
+  return {
+    open: false,
+    query: '',
+    selectedIndex: 0,
+    results: [],
+
+    quickActions: [
+      { id: 'new-video', label: 'New Video', hint: 'Generate a new AI video', icon: plusIcon, iconBg: 'bg-brand-600/20 text-brand-400', url: '/videos/new', shortcut: 'N' },
+      { id: 'analytics', label: 'View Analytics', hint: 'Channel performance', icon: chartIcon, iconBg: 'bg-emerald-600/20 text-emerald-400', url: '/analytics' },
+      { id: 'batch', label: 'Batch Import', hint: 'Generate multiple videos', icon: videoIcon, iconBg: 'bg-purple-600/20 text-purple-400', url: '/videos/new?mode=batch' },
+      { id: 'jobs', label: 'View Active Jobs', hint: 'Monitor running jobs', icon: jobIcon, iconBg: 'bg-yellow-600/20 text-yellow-400', url: '/jobs?status=running' },
+    ],
+
+    recentItems: [
+      { id: 'r1', label: 'Dashboard', icon: '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', url: '/', type: 'Page' },
+      { id: 'r2', label: 'All Videos', icon: videoIcon.replace('currentColor', '#6b7280'), url: '/videos', type: 'Page' },
+      { id: 'r3', label: 'Channels', icon: channelIcon.replace('currentColor', '#6b7280'), url: '/channels', type: 'Page' },
+    ],
+
+    get groupedResults() {
+      const groups = {};
+      let flatIndex = 0;
+      this.results.forEach(item => {
+        if (!groups[item.group]) groups[item.group] = { label: item.group, items: [] };
+        item._flatIndex = flatIndex++;
+        groups[item.group].items.push(item);
+      });
+      return Object.values(groups);
+    },
+
+    get totalItems() {
+      if (this.query.length === 0) {
+        return this.quickActions.length + this.recentItems.length;
+      }
+      return this.results.length;
+    },
+
+    handleGlobalKeydown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        this.toggle();
+      }
+    },
+
+    toggle() {
+      this.open = !this.open;
+      if (this.open) {
+        this.query = '';
+        this.selectedIndex = 0;
+        this.results = [];
+        this.$nextTick(() => this.$refs.searchInput?.focus());
+      }
+    },
+
+    close() {
+      this.open = false;
+      this.query = '';
+    },
+
+    moveSelection(delta) {
+      const total = this.totalItems;
+      if (total === 0) return;
+      this.selectedIndex = (this.selectedIndex + delta + total) % total;
+    },
+
+    executeSelected() {
+      if (this.query.length === 0) {
+        if (this.selectedIndex < this.quickActions.length) {
+          this.executeAction(this.quickActions[this.selectedIndex]);
+        } else {
+          const recentIdx = this.selectedIndex - this.quickActions.length;
+          if (this.recentItems[recentIdx]) {
+            this.navigateTo(this.recentItems[recentIdx].url);
+          }
+        }
+      } else {
+        const item = this.results.find(r => r._flatIndex === this.selectedIndex);
+        if (item) this.navigateTo(item.url);
+      }
+    },
+
+    executeAction(action) {
+      this.close();
+      window.location.href = action.url;
+    },
+
+    navigateTo(url) {
+      this.close();
+      window.location.href = url;
+    },
+
+    async search() {
+      if (this.query.length === 0) {
+        this.results = [];
+        this.selectedIndex = 0;
+        return;
+      }
+
+      this.selectedIndex = 0;
+      const q = this.query.toLowerCase();
+
+      // Client-side filtering of quick actions
+      const matchedActions = this.quickActions
+        .filter(a => a.label.toLowerCase().includes(q) || a.hint.toLowerCase().includes(q))
+        .map(a => ({
+          id: 'action-' + a.id,
+          label: a.label,
+          icon: a.icon,
+          url: a.url,
+          meta: a.hint,
+          group: 'Actions'
+        }));
+
+      // Static page matches
+      const pages = [
+        { label: 'Dashboard', url: '/', group: 'Pages' },
+        { label: 'Videos', url: '/videos', group: 'Pages' },
+        { label: 'New Video', url: '/videos/new', group: 'Pages' },
+        { label: 'Channels', url: '/channels', group: 'Pages' },
+        { label: 'Jobs', url: '/jobs', group: 'Pages' },
+        { label: 'Analytics', url: '/analytics', group: 'Pages' },
+      ].filter(p => p.label.toLowerCase().includes(q))
+       .map(p => ({
+          ...p,
+          id: 'page-' + p.label,
+          icon: '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
+          meta: 'Page'
+       }));
+
+      this.results = [...matchedActions, ...pages];
+    }
+  };
+}
+</script>

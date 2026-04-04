@@ -1,0 +1,121 @@
+{# ============================================================
+   Activity Feed Component
+   Include in dashboard: {% include "components/activity_feed.html" %}
+
+   Uses HTMX polling every 5 seconds to refresh.
+   Color-coded icons per event type.
+   Relative timestamps displayed via Alpine.js.
+   ============================================================ #}
+
+<div id="activity-feed"
+     hx-get="/api/activity"
+     hx-trigger="every 5s"
+     hx-swap="innerHTML"
+     hx-target="#activity-feed-list"
+     class="glass-card rounded-2xl p-6">
+
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-sm font-semibold text-white tracking-tight">Recent Activity</h3>
+    <div class="flex items-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot"></span>
+      <span class="text-[11px] text-gray-500">Live</span>
+    </div>
+  </div>
+
+  <div id="activity-feed-list" class="space-y-0">
+    {# Fallback / initial static content rendered server-side.
+       When the HTMX poll returns HTML from /api/activity,
+       it replaces the children of this container.
+       The server should return a list of activity-item divs. #}
+
+    {% if activities is defined and activities %}
+      {% for activity in activities %}
+      <div class="activity-line relative flex items-start gap-3 pb-5">
+        {# Event icon #}
+        <div class="flex-shrink-0 mt-0.5">
+          {% if activity.type == 'video_completed' %}
+          <div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          {% elif activity.type == 'video_generating' %}
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-indigo-400 animate-pulse-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </div>
+          {% elif activity.type == 'upload_complete' %}
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+          </div>
+          {% elif activity.type == 'job_failed' %}
+          <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          {% elif activity.type == 'channel_added' %}
+          <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </div>
+          {% else %}
+          <div class="w-8 h-8 rounded-lg bg-gray-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          {% endif %}
+        </div>
+
+        {# Event content #}
+        <div class="flex-1 min-w-0">
+          <p class="text-sm text-gray-300 leading-snug">
+            <span class="font-medium text-white">{{ activity.title }}</span>
+            {% if activity.detail %}
+            <span class="text-gray-500"> &middot; {{ activity.detail }}</span>
+            {% endif %}
+          </p>
+          <p class="mt-0.5 text-[11px] text-gray-600"
+             x-data
+             x-text="timeAgo('{{ activity.timestamp }}')">
+            {{ activity.timestamp }}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      {# Empty state #}
+      <div class="py-6 text-center">
+        <svg class="w-8 h-8 text-gray-700 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="text-sm text-gray-600">No recent activity</p>
+        <p class="text-xs text-gray-700 mt-1">Events will appear here as you generate videos</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function timeAgo(isoString) {
+  if (!isoString) return '';
+  const now = new Date();
+  const date = new Date(isoString);
+  const seconds = Math.floor((now - date) / 1000);
+
+  if (seconds < 10) return 'just now';
+  if (seconds < 60) return seconds + 's ago';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return minutes + 'm ago';
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  if (days < 7) return days + 'd ago';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+</script>

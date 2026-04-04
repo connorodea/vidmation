@@ -119,23 +119,169 @@ def stage_captions(ctx: PipelineContext, settings: Settings) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4. Media sourcing (stock video/images per script section)
+# 4a. AI video generation (uses ModelOrchestrator for multi-model routing)
+# ---------------------------------------------------------------------------
+
+def stage_ai_video_generation(ctx: PipelineContext, settings: Settings) -> None:
+    """Generate AI video clips for script sections using the ModelOrchestrator.
+
+    Behaviour depends on ``media_source`` in the channel profile or script:
+
+    * ``"ai"``    — Use AI generation for *all* sections.
+    * ``"mixed"`` — Use AI for sections with ``visual_type`` containing
+      ``"ai_image"`` or ``"ai_video"``; fall back to stock for others.
+    * ``"stock"`` — Skip AI generation entirely (existing behaviour).
+
+    The ``media_source`` is read from (in priority order):
+    1. ``ctx.script["media_source"]`` (set by the script generator)
+    2. Profile-level override via ``ctx.channel_profile.content`` extra attrs
+    3. Default: ``"stock"`` (preserves backward compatibility)
+    """
+    from vidmation.services.models.orchestrator import ModelOrchestrator
+
+    if ctx.script is None:
+        raise RuntimeError("stage_ai_video_generation requires ctx.script")
+
+    # Determine media source strategy
+    media_source = (
+        ctx.script.get("media_source")
+        or getattr(ctx.channel_profile.content, "media_source", None)
+        or "stock"
+    ).lower()
+
+    if media_source == "stock":
+        logger.info("[ai_video] media_source=stock — skipping AI video generation")
+        return
+
+    sections = ctx.script.get("sections", [])
+    if not sections:
+        logger.warning("[ai_video] No sections in script — nothing to generate")
+        return
+
+    # Filter sections based on strategy
+    if media_source == "mixed":
+        ai_sections = [
+            s for s in sections
+            if s.get("visual_type", "").lower() in ("ai_image", "ai_video", "ai")
+        ]
+        logger.info(
+            "[ai_video] media_source=mixed — %d/%d sections use AI generation",
+            len(ai_sections),
+            len(sections),
+        )
+    else:
+        # "ai" — generate for all sections
+        ai_sections = sections
+        logger.info(
+            "[ai_video] media_source=ai — generating AI video for all %d sections",
+            len(ai_sections),
+        )
+
+    if not ai_sections:
+        logger.info("[ai_video] No AI-eligible sections found in mixed mode")
+        return
+
+    output_dir = ctx.work_dir / "ai_clips"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    orchestrator = ModelOrchestrator(settings=settings)
+
+    # Log cost estimate before generating
+    cost_info = orchestrator.estimate_total_cost(ai_sections)
+    logger.info(
+        "[ai_video] Estimated cost: $%.4f across %d models",
+        cost_info["total_usd"],
+        cost_info["model_count"],
+    )
+    for sc in cost_info["sections"]:
+        logger.info(
+            "[ai_video]   Section %d: %s via %s ($%.4f)",
+            sc["section_number"],
+            sc["category"],
+            sc["model"],
+            sc["estimated_cost_usd"],
+        )
+
+    # Generate clips
+    results = orchestrator.generate_batch(
+        sections=ai_sections,
+        profile=ctx.channel_profile,
+        output_dir=output_dir,
+        parallel=len(ai_sections) > 1,
+    )
+
+    # Merge AI clips into the media_clips list.  If media_clips already has
+    # entries (e.g. from a prior stock-sourcing pass in mixed mode), replace
+    # matching section indices; otherwise initialise the list.
+    existing_clips = {c["section_index"]: c for c in (ctx.media_clips or [])}
+
+    for result in results:
+        existing_clips[result["section_index"]] = result
+
+    # Rebuild the list in section order
+    ctx.media_clips = sorted(existing_clips.values(), key=lambda c: c["section_index"])
+
+    total_cost = sum(r.get("cost", 0) for r in results)
+    logger.info(
+        "[ai_video] Generated %d AI clips (actual cost: ~$%.4f)",
+        len(results),
+        total_cost,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4b. Media sourcing (stock video/images per script section)
 # ---------------------------------------------------------------------------
 
 def stage_media_sourcing(ctx: PipelineContext, settings: Settings) -> None:
-    """Download stock media or generate AI images for each script section."""
+    """Download stock media or generate AI images for each script section.
+
+    If ``stage_ai_video_generation`` has already run (in ``"ai"`` or
+    ``"mixed"`` mode), this stage will skip sections that already have
+    AI-generated clips and only source stock media for the remaining ones.
+    """
     from vidmation.services.media import create_media_provider
 
     if ctx.script is None:
         raise RuntimeError("stage_media_sourcing requires ctx.script")
 
-    logger.info("[media] Sourcing media for %d sections", len(ctx.script.get("sections", [])))
+    # Determine which sections still need media
+    ai_covered_indices: set[int] = set()
+    if ctx.media_clips:
+        ai_covered_indices = {
+            c["section_index"]
+            for c in ctx.media_clips
+            if c.get("type") == "ai_video"
+        }
+
+    sections = ctx.script.get("sections", [])
+    sections_needing_stock = [
+        s for s in sections
+        if s["section_number"] not in ai_covered_indices
+    ]
+
+    if not sections_needing_stock:
+        logger.info(
+            "[media] All %d sections already covered by AI generation — skipping stock sourcing",
+            len(sections),
+        )
+        return
+
+    logger.info(
+        "[media] Sourcing stock media for %d/%d sections",
+        len(sections_needing_stock),
+        len(sections),
+    )
 
     media_provider = create_media_provider(settings=settings)
-    clips: list[dict] = []
+    clips: list[dict] = list(ctx.media_clips or [])
+    existing_indices = {c["section_index"] for c in clips}
 
-    for section in ctx.script.get("sections", []):
+    for section in sections_needing_stock:
         idx = section["section_number"]
+        if idx in existing_indices:
+            continue
+
         query = section["visual_query"]
         visual_type = section["visual_type"]
 
@@ -156,9 +302,9 @@ def stage_media_sourcing(ctx: PipelineContext, settings: Settings) -> None:
             "attribution": result.get("attribution", ""),
         })
 
-    ctx.media_clips = clips
+    ctx.media_clips = sorted(clips, key=lambda c: c["section_index"])
 
-    logger.info("[media] Sourced %d media clips", len(clips))
+    logger.info("[media] Total media clips after stock sourcing: %d", len(ctx.media_clips))
 
 
 # ---------------------------------------------------------------------------
@@ -268,9 +414,15 @@ STAGE_REGISTRY: list[tuple[str, callable]] = [
     ("script_generation", stage_script_generation),
     ("tts", stage_tts),
     ("captions", stage_captions),
+    ("ai_video_generation", stage_ai_video_generation),
     ("media_sourcing", stage_media_sourcing),
     ("video_assembly", stage_video_assembly),
     ("thumbnail", stage_thumbnail),
     ("upload", stage_upload),
 ]
-"""Ordered list of ``(stage_name, stage_function)`` tuples."""
+"""Ordered list of ``(stage_name, stage_function)`` tuples.
+
+``ai_video_generation`` runs before ``media_sourcing`` so that AI-generated
+clips are available when the stock sourcing stage decides which sections
+still need media.
+"""

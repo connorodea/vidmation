@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from vidmation.db.engine import init_db
-from vidmation.web.routes import api, channels, dashboard, jobs, videos
+from vidmation.web.routes import analytics, api, channels, dashboard, jobs, videos
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(channels.router, prefix="/channels", tags=["channels"])
     app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
     app.include_router(api.router, prefix="/api", tags=["api"])
+    app.include_router(analytics.router, tags=["analytics"])
 
     return app
 
