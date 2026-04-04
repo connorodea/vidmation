@@ -140,6 +140,17 @@
                     </svg>
                     <span class="sidebar-label whitespace-nowrap" :class="sidebarCollapsed ? 'hidden' : ''">Analytics</span>
                 </a>
+
+                {# Voices #}
+                <a href="/voices"
+                   class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 {% block nav_voices %}text-gray-400 hover:bg-white/[0.04] hover:text-white{% endblock %}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   title="Voices">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    </svg>
+                    <span class="sidebar-label whitespace-nowrap" :class="sidebarCollapsed ? 'hidden' : ''">Voices</span>
+                </a>
             </nav>
 
             {# Sidebar footer #}

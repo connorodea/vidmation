@@ -17,6 +17,7 @@ from vidmation.models.analytics import (
     UsageEvent,
     VideoAnalytics,
 )
+from vidmation.models.voice import Voice
 
 __all__ = [
     "Base",
@@ -43,4 +44,5 @@ __all__ = [
     "ServiceType",
     "OperationType",
     "PeriodType",
+    "Voice",
 ]

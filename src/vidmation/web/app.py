@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from vidmation.api.v1.router import router as api_v1_router
 from vidmation.db.engine import init_db
-from vidmation.web.routes import analytics, api, channels, dashboard, jobs, videos
+from vidmation.web.routes import analytics, api, channels, content, dashboard, jobs, videos, voices
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(channels.router, prefix="/channels", tags=["channels"])
     app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
     app.include_router(api.router, prefix="/api", tags=["api"])
+    app.include_router(voices.router, prefix="/voices", tags=["voices"])
     app.include_router(analytics.router, tags=["analytics"])
 
     # --- Public REST API v1 (JSON, API-key auth) ---

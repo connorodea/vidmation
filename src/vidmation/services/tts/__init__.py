@@ -20,8 +20,9 @@ def create_tts_provider(
     """Factory: return a TTSProvider for the requested backend.
 
     Args:
-        provider: ``"elevenlabs"`` or ``"openai"``.  Falls back to
-            ``settings.default_tts_provider`` when *None*.
+        provider: ``"elevenlabs"``, ``"openai"``, ``"replicate"``, or
+            ``"fal"``.  Falls back to ``settings.default_tts_provider``
+            when *None*.
         settings: Optional settings override.
     """
     settings = settings or get_settings()
@@ -36,5 +37,15 @@ def create_tts_provider(
         from vidmation.services.tts.openai_tts import OpenAITTS
 
         return OpenAITTS(settings=settings)
+
+    if provider == "replicate":
+        from vidmation.services.tts.replicate_tts import ReplicateTTS
+
+        return ReplicateTTS(settings=settings)
+
+    if provider == "fal":
+        from vidmation.services.tts.fal_tts import FalTTS
+
+        return FalTTS(settings=settings)
 
     raise ValueError(f"Unknown TTS provider: {provider!r}")
