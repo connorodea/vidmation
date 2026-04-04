@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Content Calendar - VIDMATION{% endblock %}
+{% block nav_content %}bg-gray-800 text-white{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="calendarApp()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight">Content Calendar</h1>
+            <p class="text-sm text-gray-400 mt-1">Plan, schedule, and track your video production pipeline</p>
+        </div>
+        <div class="flex gap-3">
+            {% if active_calendar_id %}
+            <a href="/content/export/{{ active_calendar_id }}.ics"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-800">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export iCal
+            </a>
+            <form method="post" action="/content/{{ active_calendar_id }}/enqueue-due" class="inline">
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-800">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Enqueue Due
+                </button>
+            </form>
+            {% endif %}
+            <button @click="showGenerateForm = !showGenerateForm"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Generate Calendar
+            </button>
+        </div>
+    </div>
+
+    <!-- Generate Calendar Form -->
+    <div x-show="showGenerateForm" x-cloak
+         class="rounded-xl bg-gray-900 border border-gray-800 p-6">
+        <h2 class="text-lg font-semibold mb-4">Generate New Content Calendar</h2>
+        <form method="post" action="/content/generate" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">Channel</label>
+                <select name="channel_name" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:ring-brand-500 focus:border-brand-500">
+                    {% for ch in channels %}
+                    <option value="{{ ch.name }}">{{ ch.name }}</option>
+                    {% endfor %}
+                    {% if not channels %}
+                    <option value="default">default</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">Weeks</label>
+                <input type="number" name="weeks" value="4" min="1" max="12"
+                       class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:ring-brand-500 focus:border-brand-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">Videos/Week</label>
+                <input type="number" name="videos_per_week" value="3" min="1" max="7"
+                       class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:ring-brand-500 focus:border-brand-500">
+            </div>
+            <div class="md:col-span-3 flex justify-end">
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                    <svg class="w-4 h-4 animate-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Generate with AI
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Calendar selector -->
+    {% if calendars %}
+    <div class="flex gap-2 items-center">
+        <span class="text-sm text-gray-400">Calendar:</span>
+        {% for cal in calendars %}
+        <a href="/content?calendar_id={{ cal.id }}"
+           class="px-3 py-1.5 rounded-lg text-sm {% if active_calendar_id == cal.id %}bg-gray-700 text-white{% else %}text-gray-400 hover:bg-gray-800{% endif %}">
+            {{ cal.channel_name or 'Untitled' }} ({{ cal.entry_count }})
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Stats bar -->
+    {% if stats %}
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
+            <p class="text-2xl font-bold mt-1">{{ stats.total }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
+            <p class="text-2xl font-bold mt-1 text-yellow-400">{{ stats.pending }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wider">Queued</p>
+            <p class="text-2xl font-bold mt-1 text-blue-400">{{ stats.queued }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
+            <p class="text-2xl font-bold mt-1 text-green-400">{{ stats.completed }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wider">Skipped</p>
+            <p class="text-2xl font-bold mt-1 text-gray-400">{{ stats.skipped }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Trending Topics (HTMX) -->
+    <div class="rounded-xl bg-gray-900 border border-gray-800 p-6" x-data="{ showTrending: false }">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Trending Topic Ideas</h2>
+            <div class="flex items-center gap-3">
+                <input type="text" id="trending-niche" placeholder="Enter niche..."
+                       class="rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-gray-100 w-48 focus:ring-brand-500 focus:border-brand-500">
+                <button class="px-4 py-1.5 rounded-lg bg-brand-600 text-sm font-medium text-white hover:bg-brand-700"
+                        hx-get="/content/api/content/suggestions"
+                        hx-include="#trending-niche"
+                        hx-vals='js:{"niche": document.getElementById("trending-niche").value || "general"}'
+                        hx-target="#trending-results"
+                        hx-indicator="#trending-spinner">
+                    Discover
+                </button>
+                <svg id="trending-spinner" class="htmx-indicator w-5 h-5 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            </div>
+        </div>
+        <div id="trending-results" class="overflow-hidden rounded-lg border border-gray-800">
+            <p class="p-8 text-center text-gray-500 text-sm">Enter a niche and click Discover to find trending topics</p>
+        </div>
+    </div>
+
+    <!-- Weekly Grid -->
+    {% if weeks %}
+    <div class="space-y-6">
+        {% for week_key, week_entries in weeks.items() %}
+        <div class="rounded-xl bg-gray-900 border border-gray-800 overflow-hidden">
+            <div class="px-6 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-300">{{ week_key }}</h3>
+                <span class="text-xs text-gray-500">{{ week_entries | length }} videos</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+                {% for entry in week_entries %}
+                <div class="p-4 hover:bg-gray-800/50 transition-colors relative group"
+                     x-data="{ showActions: false, editing: false }">
+
+                    <!-- Date -->
+                    <p class="text-xs text-gray-500 mb-1">{{ entry.date }}</p>
+
+                    <!-- Status badge -->
+                    {% set status = entry.status|default('pending') %}
+                    <span class="inline-block px-2 py-0.5 rounded text-xs mb-2
+                        {% if status == 'completed' %}bg-green-900/50 text-green-400
+                        {% elif status == 'queued' %}bg-blue-900/50 text-blue-400
+                        {% elif status == 'generating' %}bg-brand-900/50 text-brand-400
+                        {% elif status == 'skipped' %}bg-gray-800 text-gray-500
+                        {% else %}bg-yellow-900/50 text-yellow-400{% endif %}">
+                        {{ status }}
+                    </span>
+
+                    <!-- Content type badge -->
+                    {% if entry.content_type %}
+                    <span class="inline-block px-2 py-0.5 rounded text-xs mb-2
+                        {% if entry.content_type == 'pillar' %}bg-purple-900/50 text-purple-400
+                        {% elif entry.content_type == 'trending' %}bg-red-900/50 text-red-400
+                        {% elif entry.content_type == 'evergreen' %}bg-emerald-900/50 text-emerald-400
+                        {% elif entry.content_type == 'seasonal' %}bg-orange-900/50 text-orange-400
+                        {% else %}bg-gray-800 text-gray-400{% endif %}">
+                        {{ entry.content_type }}
+                    </span>
+                    {% endif %}
+
+                    <!-- Title -->
+                    <p class="text-sm font-medium leading-tight">{{ entry.title|default(entry.topic)|truncate(60) }}</p>
+
+                    <!-- Format -->
+                    {% if entry.format %}
+                    <p class="text-xs text-gray-500 mt-1">{{ entry.format }}</p>
+                    {% endif %}
+
+                    <!-- Keywords -->
+                    {% if entry.keywords %}
+                    <div class="flex flex-wrap gap-1 mt-2">
+                        {% for kw in entry.keywords[:3] %}
+                        <span class="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">{{ kw }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Action buttons (show on hover) -->
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        {% if status == 'pending' %}
+                        <!-- Generate -->
+                        <form method="post" action="/content/entry/{{ entry.id }}/generate" class="inline">
+                            <input type="hidden" name="calendar_id" value="{{ active_calendar_id }}">
+                            <button type="submit" title="Generate Video"
+                                    class="p-1 rounded bg-brand-600 hover:bg-brand-700 text-white">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+                            </button>
+                        </form>
+                        <!-- Skip -->
+                        <form method="post" action="/content/entry/{{ entry.id }}/status" class="inline">
+                            <input type="hidden" name="calendar_id" value="{{ active_calendar_id }}">
+                            <input type="hidden" name="status" value="skipped">
+                            <button type="submit" title="Skip"
+                                    class="p-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <!-- Reschedule (Alpine.js inline) -->
+                        <button @click="editing = !editing" title="Reschedule"
+                                class="p-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Reschedule input (Alpine.js toggle) -->
+                    <div x-show="editing" x-cloak class="mt-2">
+                        <form method="post" action="/content/entry/{{ entry.id }}/reschedule" class="flex gap-1">
+                            <input type="hidden" name="calendar_id" value="{{ active_calendar_id }}">
+                            <input type="date" name="new_date" value="{{ entry.date }}"
+                                   class="flex-1 rounded bg-gray-800 border border-gray-700 px-2 py-1 text-xs text-gray-100">
+                            <button type="submit" class="px-2 py-1 rounded bg-brand-600 text-xs text-white hover:bg-brand-700">Move</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif not show_generate_form|default(false) %}
+    <div class="rounded-xl bg-gray-900 border border-gray-800 p-12 text-center">
+        <p class="text-gray-400 text-lg">No content calendar found</p>
+        <p class="mt-1 text-sm text-gray-500">Generate an AI-powered content calendar to get started</p>
+        <button @click="showGenerateForm = true"
+                class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+            Generate Calendar
+        </button>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function calendarApp() {
+    return {
+        showGenerateForm: {{ 'true' if show_generate_form|default(false) else 'false' }},
+    }
+}
+</script>
+{% endblock %}

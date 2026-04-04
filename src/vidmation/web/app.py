@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from vidmation.api.v1.router import router as api_v1_router
 from vidmation.db.engine import init_db
 from vidmation.web.routes import analytics, api, channels, dashboard, jobs, videos
 
@@ -36,6 +37,9 @@ def create_app() -> FastAPI:
     app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
     app.include_router(api.router, prefix="/api", tags=["api"])
     app.include_router(analytics.router, tags=["analytics"])
+
+    # --- Public REST API v1 (JSON, API-key auth) ---
+    app.include_router(api_v1_router, prefix="/api/v1")
 
     return app
 
