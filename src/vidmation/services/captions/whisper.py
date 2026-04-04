@@ -29,7 +29,7 @@ class WhisperCaptionGenerator(BaseService):
     def __init__(
         self,
         settings: Settings | None = None,
-        backend: str = "replicate",
+        backend: str = "faster-whisper",
     ) -> None:
         super().__init__(settings=settings)
         self._backend = backend
@@ -63,10 +63,41 @@ class WhisperCaptionGenerator(BaseService):
 
         if self._backend == "replicate":
             return self._transcribe_replicate(audio_path)
+        if self._backend == "faster-whisper":
+            return self._transcribe_faster_whisper(audio_path)
         if self._backend == "local":
             return self._transcribe_local(audio_path)
 
         raise ValueError(f"Unknown Whisper backend: {self._backend!r}")
+
+    def _transcribe_faster_whisper(self, audio_path: Path) -> list[dict]:
+        """Run transcription using faster-whisper (CTranslate2). Python 3.14 compatible."""
+        self.logger.info("Whisper (faster-whisper): transcribing %s", audio_path.name)
+
+        try:
+            from faster_whisper import WhisperModel
+        except ImportError as exc:
+            raise ImportError(
+                "faster-whisper backend requires the 'faster-whisper' package. "
+                "Install it with: pip install faster-whisper"
+            ) from exc
+
+        model = WhisperModel("base", device="cpu", compute_type="int8")
+        segments, info = model.transcribe(str(audio_path), word_timestamps=True)
+
+        words: list[dict] = []
+        for segment in segments:
+            if segment.words:
+                for w in segment.words:
+                    words.append({
+                        "word": w.word.strip(),
+                        "start": round(w.start, 3),
+                        "end": round(w.end, 3),
+                    })
+
+        self.logger.info("faster-whisper transcription: %d words (lang=%s, prob=%.2f)",
+                         len(words), info.language, info.language_probability)
+        return words
 
     @retry(max_attempts=3, base_delay=5.0, exceptions=(Exception,))
     def _transcribe_replicate(self, audio_path: Path) -> list[dict]:
