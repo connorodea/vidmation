@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications — VIDMATION{% endblock %}
+
+{% block nav_notifications %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/>
+</svg>
+<span class="text-sm text-gray-300 font-medium">Notifications</span>
+{% endblock %}
+
+{% block content %}
+<div x-data="notificationCenter()" class="space-y-6">
+
+    {# ===== PAGE HEADER ===== #}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Notifications</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if unread_count > 0 %}
+                    <span class="text-brand-400 font-medium">{{ unread_count }}</span> unread notification{{ "s" if unread_count != 1 else "" }}
+                {% else %}
+                    All caught up
+                {% endif %}
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            {% if unread_count > 0 %}
+            <button hx-post="/api/notifications/read-all"
+                    hx-swap="none"
+                    hx-on::after-request="window.location.reload()"
+                    class="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.06] px-4 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:border-white/[0.1] transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
+                </svg>
+                Mark All Read
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ===== FILTERS ===== #}
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="/notifications"
+           class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors {{ 'bg-brand-600 text-white' if not current_filter or current_filter == 'all' else 'bg-white/[0.04] text-gray-400 hover:text-white border border-white/[0.06]' }}">
+            All
+        </a>
+        <a href="/notifications?filter=unread"
+           class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors {{ 'bg-brand-600 text-white' if current_filter == 'unread' else 'bg-white/[0.04] text-gray-400 hover:text-white border border-white/[0.06]' }}">
+            Unread
+            {% if unread_count > 0 %}
+            <span class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand-500/20 text-brand-400 text-[10px] font-bold px-1">{{ unread_count }}</span>
+            {% endif %}
+        </a>
+        {% for etype in event_types %}
+        <a href="/notifications?filter={{ etype }}"
+           class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors {{ 'bg-brand-600 text-white' if current_filter == etype else 'bg-white/[0.04] text-gray-400 hover:text-white border border-white/[0.06]' }}">
+            {{ etype.replace("_", " ").title() }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {# ===== NOTIFICATION LIST ===== #}
+    <div class="glass rounded-2xl border border-white/[0.06] overflow-hidden">
+        {% if notifications %}
+        <div class="divide-y divide-white/[0.04]">
+            {% for notif in notifications %}
+            <div class="group flex items-start gap-4 px-6 py-4 transition-colors {{ 'bg-white/[0.01]' if notif.is_read else 'bg-brand-500/[0.02]' }} hover:bg-white/[0.03]"
+                 id="notif-{{ notif.id }}">
+
+                {# Event icon #}
+                <div class="flex-shrink-0 mt-0.5">
+                    {% set icon_map = {
+                        "film": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>',
+                        "alert-triangle": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>',
+                        "upload-cloud": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>',
+                        "layers": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>',
+                        "dollar-sign": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+                        "clock": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+                        "share-2": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>',
+                        "bell": '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>'
+                    } %}
+                    {% set event_colours = {
+                        "video_complete": "text-green-400 bg-green-500/10",
+                        "job_failed": "text-red-400 bg-red-500/10",
+                        "upload_complete": "text-brand-400 bg-brand-500/10",
+                        "batch_complete": "text-blue-400 bg-blue-500/10",
+                        "cost_alert": "text-yellow-400 bg-yellow-500/10",
+                        "schedule_fired": "text-purple-400 bg-purple-500/10",
+                        "publish_complete": "text-teal-400 bg-teal-500/10"
+                    } %}
+                    {% set icon_key = notif.event_icon %}
+                    {% set colour_class = event_colours.get(notif.event, "text-gray-400 bg-gray-500/10") %}
+                    <div class="flex items-center justify-center w-9 h-9 rounded-xl {{ colour_class }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {{ icon_map.get(icon_key, icon_map["bell"]) | safe }}
+                        </svg>
+                    </div>
+                </div>
+
+                {# Content #}
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium {{ 'text-white' if not notif.is_read else 'text-gray-300' }}">
+                            {{ notif.title }}
+                        </p>
+                        {% if not notif.is_read %}
+                        <span class="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0"></span>
+                        {% endif %}
+                    </div>
+                    <p class="mt-0.5 text-xs text-gray-500 line-clamp-2">{{ notif.message }}</p>
+                    <div class="mt-1.5 flex items-center gap-3">
+                        <span class="text-[10px] text-gray-600">
+                            {{ notif.created_at.strftime("%b %d, %Y at %H:%M UTC") if notif.created_at else "" }}
+                        </span>
+                        {% if notif.channels_sent %}
+                        <span class="text-[10px] text-gray-700">
+                            via {{ notif.channels_sent | join(", ") }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Actions #}
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    {% if not notif.is_read %}
+                    <button hx-post="/api/notifications/{{ notif.id }}/read"
+                            hx-swap="none"
+                            hx-on::after-request="document.getElementById('notif-{{ notif.id }}').classList.remove('bg-brand-500/[0.02]'); document.getElementById('notif-{{ notif.id }}').classList.add('bg-white/[0.01]')"
+                            class="rounded-lg p-1.5 text-gray-600 hover:text-brand-400 hover:bg-brand-500/10 transition-colors"
+                            title="Mark as read">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-16 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/[0.03] mb-4">
+                <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+            </div>
+            <h3 class="text-base font-medium text-gray-400">No notifications</h3>
+            <p class="mt-1 text-sm text-gray-600">
+                {% if current_filter == "unread" %}
+                    All notifications have been read.
+                {% elif current_filter and current_filter not in ("all", "unread") %}
+                    No {{ current_filter.replace("_", " ") }} notifications.
+                {% else %}
+                    Notifications will appear here as events occur.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+function notificationCenter() {
+    return {
+        init() {
+            // Poll for new notifications every 30 seconds
+            setInterval(() => {
+                htmx.ajax('GET', '/api/notifications/badge', '#notif-badge-target');
+            }, 30000);
+        }
+    };
+}
+</script>
+{% endblock %}

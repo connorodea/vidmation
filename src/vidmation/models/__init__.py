@@ -5,6 +5,19 @@ from vidmation.models.channel import Channel
 from vidmation.models.video import Video, VideoFormat, VideoStatus
 from vidmation.models.job import Job, JobStatus, JobType
 from vidmation.models.asset import Asset, AssetType, AssetSource
+from vidmation.models.api_key import APIKey
+from vidmation.models.webhook import Webhook
+from vidmation.models.notification import Notification
+from vidmation.models.schedule import Schedule, ScheduleStatus, ScheduleType, TopicSource
+from vidmation.models.analytics import (
+    CostSummary,
+    OperationType,
+    PeriodType,
+    ServiceType,
+    UsageEvent,
+    VideoAnalytics,
+)
+from vidmation.models.voice import Voice
 
 __all__ = [
     "Base",
@@ -18,4 +31,18 @@ __all__ = [
     "Asset",
     "AssetType",
     "AssetSource",
+    "APIKey",
+    "Webhook",
+    "Notification",
+    "Schedule",
+    "ScheduleStatus",
+    "ScheduleType",
+    "TopicSource",
+    "UsageEvent",
+    "CostSummary",
+    "VideoAnalytics",
+    "ServiceType",
+    "OperationType",
+    "PeriodType",
+    "Voice",
 ]

@@ -47,3 +47,64 @@ youtube:
   category_id: "22"
   default_language: "en"
   schedule: null
+
+# ── Brand Kit ───────────────────────────────────────────────────────
+# Visual branding elements applied to all rendered videos.
+brand_kit:
+  # Logo overlay
+  logo_path: null            # Path to logo image (PNG with transparency recommended)
+  logo_position: "top_right" # top_left | top_right | bottom_left | bottom_right | center
+  logo_opacity: 0.8
+  logo_scale: 0.1            # Logo width as fraction of video width (0.1 = 10%)
+
+  # Colour palette
+  colors:
+    primary: "#FFFFFF"
+    secondary: "#000000"
+    accent: "#FF5733"
+    background: "#1A1A2E"
+    text: "#FFFFFF"
+
+  # Font families
+  fonts:
+    heading: "Montserrat-Bold"
+    body: "Open Sans"
+    caption: "Montserrat-Bold"
+
+  # Intro / outro video clips (set to null to disable)
+  intro_video_path: null     # Path to intro video clip
+  outro_video_path: null     # Path to outro video clip
+
+  # Watermark overlay
+  watermark_path: null       # Path to watermark image
+  watermark_position: "bottom_right"
+  watermark_opacity: 0.3
+
+  # Lower third style (name/title overlays)
+  lower_third_style:
+    bg_color: "#000000CC"
+    text_color: "#FFFFFF"
+    font: "Montserrat-Bold"
+    font_size: 36
+    position: "bottom_left"
+    padding: 20
+    margin_bottom: 80
+
+# ── Multi-Platform Export ───────────────────────────────────────────
+# Platforms to auto-export when a video is rendered.
+export_platforms:
+  - "youtube"
+  # - "youtube_shorts"
+  # - "tiktok"
+  # - "instagram_reels"
+  # - "instagram_feed"
+  # - "instagram_stories"
+
+# Per-platform export options (optional overrides)
+export_options:
+  tiktok:
+    crop_mode: "center"       # center | pillarbox
+  instagram_reels:
+    crop_mode: "center"
+  instagram_feed:
+    crop_mode: "center"

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Cost Details - VIDMATION{% endblock %}
+{% block nav_analytics %}bg-gray-800 text-white{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight">Cost Details</h1>
+            <p class="mt-1 text-sm text-gray-400">Detailed usage events and cost tracking</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="/analytics" class="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                Overview
+            </a>
+            <a href="/api/analytics/costs/export?period={{ period }}" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors">
+                Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-4 items-center">
+        <!-- Period Tabs -->
+        <div class="flex rounded-lg border border-gray-700 overflow-hidden">
+            <a href="/analytics/costs?period=daily{% if service_filter %}&service={{ service_filter }}{% endif %}"
+               class="px-4 py-2 text-sm font-medium {% if period == 'daily' %}bg-brand-600 text-white{% else %}text-gray-300 hover:bg-gray-800{% endif %} transition-colors">
+                Today
+            </a>
+            <a href="/analytics/costs?period=weekly{% if service_filter %}&service={{ service_filter }}{% endif %}"
+               class="px-4 py-2 text-sm font-medium border-l border-gray-700 {% if period == 'weekly' %}bg-brand-600 text-white{% else %}text-gray-300 hover:bg-gray-800{% endif %} transition-colors">
+                7 Days
+            </a>
+            <a href="/analytics/costs?period=monthly{% if service_filter %}&service={{ service_filter }}{% endif %}"
+               class="px-4 py-2 text-sm font-medium border-l border-gray-700 {% if period == 'monthly' %}bg-brand-600 text-white{% else %}text-gray-300 hover:bg-gray-800{% endif %} transition-colors">
+                30 Days
+            </a>
+        </div>
+
+        <!-- Service Filter -->
+        <div x-data="{ open: false }" class="relative">
+            <button @click="open = !open" class="flex items-center gap-2 rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                {{ service_filter or 'All Services' }}
+            </button>
+            <div x-show="open" @click.away="open = false" x-cloak
+                 class="absolute left-0 mt-2 w-56 rounded-lg bg-gray-800 border border-gray-700 shadow-xl z-10">
+                <a href="/analytics/costs?period={{ period }}"
+                   class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 {% if not service_filter %}font-medium text-white{% endif %}">
+                    All Services
+                </a>
+                {% for svc in all_services %}
+                <a href="/analytics/costs?period={{ period }}&service={{ svc }}"
+                   class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 {% if service_filter == svc %}font-medium text-white{% endif %}">
+                    {{ svc }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Total Cost ({{ period }})</p>
+            <p class="mt-2 text-3xl font-bold text-white">${{ "%.4f"|format(total_cost) }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Total API Calls</p>
+            <p class="mt-2 text-3xl font-bold text-brand-500">{{ "{:,}".format(total_calls) }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Avg Cost per Call</p>
+            <p class="mt-2 text-3xl font-bold text-green-400">${{ "%.6f"|format(total_cost / total_calls) if total_calls > 0 else "0.00" }}</p>
+        </div>
+    </div>
+
+    <!-- Cost by Service Breakdown -->
+    {% if cost_data.by_service %}
+    <div class="rounded-xl bg-gray-900 border border-gray-800 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-800">
+            <h3 class="text-sm font-medium text-gray-300">Cost by Service</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800/50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-gray-400 font-medium">Service</th>
+                    <th class="px-5 py-3 text-right text-gray-400 font-medium">Calls</th>
+                    <th class="px-5 py-3 text-right text-gray-400 font-medium">Tokens</th>
+                    <th class="px-5 py-3 text-right text-gray-400 font-medium">Cost</th>
+                    <th class="px-5 py-3 text-right text-gray-400 font-medium">% of Total</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for svc in cost_data.by_service %}
+                <tr class="hover:bg-gray-800/30">
+                    <td class="px-5 py-3 font-medium text-gray-200">{{ svc.service }}</td>
+                    <td class="px-5 py-3 text-right text-gray-300">{{ "{:,}".format(svc.calls) }}</td>
+                    <td class="px-5 py-3 text-right text-gray-300">{{ "{:,}".format(svc.tokens) if svc.tokens else '-' }}</td>
+                    <td class="px-5 py-3 text-right font-medium text-white">${{ "%.4f"|format(svc.cost_usd) }}</td>
+                    <td class="px-5 py-3 text-right text-gray-400">
+                        {% if total_cost > 0 %}
+                        {{ "%.1f"|format(svc.cost_usd / total_cost * 100) }}%
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Daily Cost Chart -->
+    {% if cost_data.daily_trend %}
+    <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Daily Cost Trend</h3>
+        <div class="relative" style="height: 300px;">
+            <canvas id="dailyCostChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Usage Events Table -->
+    <div class="rounded-xl bg-gray-900 border border-gray-800 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+            <h3 class="text-sm font-medium text-gray-300">Usage Events</h3>
+            <span class="text-xs text-gray-500">{{ events|length }} events</span>
+        </div>
+        {% if events %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-800/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Timestamp</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Service</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Operation</th>
+                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Tokens</th>
+                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Duration</th>
+                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Cost</th>
+                        <th class="px-4 py-3 text-right text-gray-400 font-medium">Running Total</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Model</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for event in events %}
+                    <tr class="hover:bg-gray-800/30">
+                        <td class="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">{{ event.timestamp[:19] }}</td>
+                        <td class="px-4 py-2.5">
+                            <span class="px-2 py-0.5 rounded text-xs
+                                {% if 'claude' in event.service %}bg-purple-900/50 text-purple-400
+                                {% elif 'openai' in event.service or 'dalle' in event.service %}bg-green-900/50 text-green-400
+                                {% elif 'elevenlabs' in event.service %}bg-blue-900/50 text-blue-400
+                                {% elif 'replicate' in event.service %}bg-orange-900/50 text-orange-400
+                                {% elif 'fal' in event.service %}bg-pink-900/50 text-pink-400
+                                {% else %}bg-gray-800 text-gray-400{% endif %}">
+                                {{ event.service }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-300">{{ event.operation }}</td>
+                        <td class="px-4 py-2.5 text-right text-gray-300">{{ "{:,}".format(event.tokens_used) if event.tokens_used else '-' }}</td>
+                        <td class="px-4 py-2.5 text-right text-gray-300">{{ "%.1f"|format(event.duration_seconds) ~ 's' if event.duration_seconds else '-' }}</td>
+                        <td class="px-4 py-2.5 text-right font-medium text-white">${{ "%.4f"|format(event.cost_usd) }}</td>
+                        <td class="px-4 py-2.5 text-right text-gray-400">${{ "%.4f"|format(event.running_total) if event.running_total is defined else '-' }}</td>
+                        <td class="px-4 py-2.5 text-xs text-gray-500">{{ event.model_name or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-gray-500">
+            No usage events found for the selected period.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+    Chart.defaults.color = '#9ca3af';
+
+    const dailyData = {{ cost_data.daily_trend | tojson }};
+    if (dailyData.length > 0) {
+        const labels = dailyData.map(d => d.date.slice(5));
+        const costs = dailyData.map(d => d.cost_usd);
+        const calls = dailyData.map(d => d.calls);
+
+        new Chart(document.getElementById('dailyCostChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Cost ($)',
+                        data: costs,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'API Calls',
+                        data: calls,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: false,
+                        tension: 0.3,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                if (ctx.datasetIndex === 0) return `Cost: $${ctx.parsed.y.toFixed(4)}`;
+                                return `Calls: ${ctx.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: '#1f2937' } },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: { color: '#1f2937' },
+                        ticks: { callback: (v) => '$' + v.toFixed(2) },
+                        title: { display: true, text: 'Cost ($)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'API Calls' }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

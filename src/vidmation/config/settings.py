@@ -50,6 +50,27 @@ class Settings(BaseSettings):
     default_image_provider: Literal["dalle", "replicate", "fal"] = "dalle"
     default_video_format: Literal["landscape", "portrait"] = "landscape"
 
+    # --- Notifications ---
+    email_provider: Literal["resend", "smtp"] = "resend"
+    email_from: str = "noreply@vidmation.io"
+    email_to: str = ""  # comma-separated
+    resend_api_key: SecretStr = SecretStr("")
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    discord_webhook_url: str = ""
+    slack_webhook_url: str = ""
+
+    # --- Social Publishing ---
+    tiktok_access_token: SecretStr = SecretStr("")
+    instagram_access_token: SecretStr = SecretStr("")
+    instagram_account_id: str = ""
+    public_base_url: str = ""  # for Instagram video hosting
+
+    # --- Cost Budget ---
+    monthly_budget: float = 100.0  # USD, for cost alerts
+
     # --- Paths ---
     data_dir: Path = Path("data")
     assets_dir: Path = Path("assets")
