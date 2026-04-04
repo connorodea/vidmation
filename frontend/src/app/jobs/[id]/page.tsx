@@ -83,7 +83,7 @@ export default function JobDetailPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [job?.status, params.id, job]);
+  }, [job?.status, params.id]);
 
   async function handleCancel() {
     if (!params.id) return;

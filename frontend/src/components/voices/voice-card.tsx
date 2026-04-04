@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Play, Pause, Mic } from "lucide-react";
@@ -41,14 +41,28 @@ interface VoiceCardProps {
 
 export function VoiceCard({ voice, className }: VoiceCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePlayToggle = useCallback(() => {
-    setIsPlaying((prev) => !prev);
-    // In a real implementation, this would control audio playback
-    if (!isPlaying) {
-      setTimeout(() => setIsPlaying(false), 3000);
-    }
-  }, [isPlaying]);
+    setIsPlaying((prev) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (!prev) {
+        // Starting playback -- auto-stop after 3s
+        timeoutRef.current = setTimeout(() => setIsPlaying(false), 3000);
+      }
+      return !prev;
+    });
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const providerConfig = PROVIDER_CONFIG[voice.provider];
   const initial = voice.name.charAt(0).toUpperCase();

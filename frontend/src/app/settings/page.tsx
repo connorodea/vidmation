@@ -166,10 +166,10 @@ export default function SettingsPage() {
     setTimeout(() => setCopiedId(null), 2000);
   }, []);
 
-  const budgetPct = Math.min(
-    (currentSpend / parseFloat(monthlyBudget || "1")) * 100,
-    100
-  );
+  const safeBudget = Math.max(0, parseFloat(monthlyBudget || "0"));
+  const budgetPct = safeBudget > 0
+    ? Math.min((currentSpend / safeBudget) * 100, 100)
+    : 0;
 
   return (
     <div className="min-h-screen bg-[#0d0d0d]">

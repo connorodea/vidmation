@@ -15,6 +15,8 @@ export function useKeyboardShortcut(
   callback: () => void,
   enabled: boolean = true
 ) {
+  const { key, meta, ctrl, shift, alt } = combo;
+
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (!enabled) return;
@@ -26,13 +28,13 @@ export function useKeyboardShortcut(
         target.isContentEditable;
 
       // Allow meta/ctrl shortcuts even in inputs
-      if (isInput && !combo.meta && !combo.ctrl) return;
+      if (isInput && !meta && !ctrl) return;
 
-      const metaMatch = combo.meta ? event.metaKey : !event.metaKey;
-      const ctrlMatch = combo.ctrl ? event.ctrlKey : !event.ctrlKey;
-      const shiftMatch = combo.shift ? event.shiftKey : true;
-      const altMatch = combo.alt ? event.altKey : !event.altKey;
-      const keyMatch = event.key.toLowerCase() === combo.key.toLowerCase();
+      const metaMatch = meta ? event.metaKey : !event.metaKey;
+      const ctrlMatch = ctrl ? event.ctrlKey : !event.ctrlKey;
+      const shiftMatch = shift ? event.shiftKey : true;
+      const altMatch = alt ? event.altKey : !event.altKey;
+      const keyMatch = event.key.toLowerCase() === key.toLowerCase();
 
       if (keyMatch && metaMatch && ctrlMatch && shiftMatch && altMatch) {
         event.preventDefault();
@@ -40,7 +42,7 @@ export function useKeyboardShortcut(
         callback();
       }
     },
-    [combo, callback, enabled]
+    [key, meta, ctrl, shift, alt, callback, enabled]
   );
 
   useEffect(() => {

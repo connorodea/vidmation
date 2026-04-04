@@ -204,7 +204,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 export function CommandPaletteWithShortcut() {
   const [open, setOpen] = useState(false);
 
-  useKeyboardShortcut({ key: "k", meta: true }, () => setOpen(true));
+  const cmdKCombo = useMemo(() => ({ key: "k", meta: true }), []);
+  useKeyboardShortcut(cmdKCombo, () => setOpen(true));
 
   return <CommandPalette open={open} onOpenChange={setOpen} />;
 }
