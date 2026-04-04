@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/content/calendar-grid";
 import { TrendingTopics } from "@/components/content/trending-topics";
@@ -8,6 +9,7 @@ import { Sparkles, Calendar } from "lucide-react";
 
 export default function ContentPage() {
   const [isGenerating, setIsGenerating] = useState(false);
+  const router = useRouter();
 
   const handleGenerateCalendar = () => {
     setIsGenerating(true);
@@ -40,12 +42,10 @@ export default function ContentPage() {
           <div className="min-w-0 flex-1">
             <CalendarGrid
               onItemClick={(item) => {
-                // Navigate to generate video from this content item
-                window.location.href = `/videos/new?topic=${encodeURIComponent(item.topic)}`;
+                router.push(`/videos/new?topic=${encodeURIComponent(item.topic)}`);
               }}
               onAddClick={(date) => {
-                // Open content creation for this date
-                console.log("Add content for:", date);
+                // TODO: Open content creation for this date
               }}
             />
           </div>

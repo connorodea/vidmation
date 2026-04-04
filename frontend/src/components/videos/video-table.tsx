@@ -97,7 +97,7 @@ export function VideoTable({ videos }: { videos: Video[] }) {
             key={video.id}
             className="cursor-pointer"
             onClick={() => router.push(`/videos/${video.id}`)}
-            role="link"
+            aria-label={`View video: ${video.title}`}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter") router.push(`/videos/${video.id}`);

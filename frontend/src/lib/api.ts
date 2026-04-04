@@ -2,13 +2,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 class ApiClient {
   private baseUrl: string;
-  private apiKey: string;
 
   constructor(baseUrl: string = API_BASE) {
     this.baseUrl = baseUrl;
-    this.apiKey = typeof window !== "undefined"
-      ? localStorage.getItem("vidmation_api_key") || ""
-      : "";
+  }
+
+  private getApiKey(): string {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("vidmation_api_key") || "";
   }
 
   private async request<T>(
@@ -16,9 +17,10 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    const apiKey = this.getApiKey();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(this.apiKey ? { "X-API-Key": this.apiKey } : {}),
+      ...(apiKey ? { "X-API-Key": apiKey } : {}),
       ...(options.headers as Record<string, string>),
     };
 
