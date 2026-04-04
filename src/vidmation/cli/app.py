@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import typer
 
+from vidmation.cli.agent import agent_app
 from vidmation.cli.audio import audio_app
 from vidmation.cli.batch import batch_app
 from vidmation.cli.channel import channel_app
@@ -21,6 +22,7 @@ app = typer.Typer(
 )
 
 # Register sub-command groups
+app.add_typer(agent_app, name="agent", help="AI agent: Claude orchestrates end-to-end video creation.")
 app.add_typer(generate_app, name="generate", help="Generate videos, scripts, voiceovers, and thumbnails.")
 app.add_typer(channel_app, name="channel", help="Manage YouTube channels.")
 app.add_typer(job_app, name="job", help="View and manage pipeline jobs.")
