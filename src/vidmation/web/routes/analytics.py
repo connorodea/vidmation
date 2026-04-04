@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 from vidmation.analytics.reports import ReportGenerator
 from vidmation.analytics.tracker import get_tracker
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 
@@ -63,7 +63,7 @@ async def analytics_dashboard(request: Request):
 @router.get("/analytics/costs", response_class=HTMLResponse)
 async def analytics_costs(
     request: Request,
-    period: str = Query("monthly", regex="^(daily|weekly|monthly)$"),
+    period: str = Query("monthly", pattern="^(daily|weekly|monthly)$"),
     service: str | None = Query(None),
 ):
     """Detailed cost breakdown page with filtering."""
@@ -144,7 +144,7 @@ async def analytics_performance(
 
 @router.get("/api/analytics/costs")
 async def api_analytics_costs(
-    period: str = Query("monthly", regex="^(daily|weekly|monthly)$"),
+    period: str = Query("monthly", pattern="^(daily|weekly|monthly)$"),
 ):
     """JSON cost data for charts and HTMX polling."""
     reports = ReportGenerator()
@@ -179,7 +179,7 @@ async def api_estimate_cost(
 
 @router.get("/api/analytics/costs/export")
 async def api_export_costs_csv(
-    period: str = Query("monthly", regex="^(daily|weekly|monthly)$"),
+    period: str = Query("monthly", pattern="^(daily|weekly|monthly)$"),
 ):
     """Export usage events as a CSV download."""
     tracker = get_tracker()

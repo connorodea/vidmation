@@ -74,14 +74,15 @@ def stage_tts(ctx: PipelineContext, settings: Settings) -> None:
     full_narration = "\n\n".join(parts)
     output_path = ctx.work_dir / "voiceover.mp3"
 
-    result = tts.synthesize(
+    # synthesize() returns (audio_path: Path, duration: float)
+    voiceover_path, voiceover_duration = tts.synthesize(
         text=full_narration,
         output_path=output_path,
         voice_config=ctx.channel_profile.voice,
     )
 
-    ctx.voiceover_path = Path(result["path"])
-    ctx.voiceover_duration = result.get("duration")
+    ctx.voiceover_path = Path(voiceover_path)
+    ctx.voiceover_duration = voiceover_duration
 
     logger.info(
         "[tts] Voiceover saved to %s (%.1fs)",
@@ -104,9 +105,8 @@ def stage_captions(ctx: PipelineContext, settings: Settings) -> None:
     logger.info("[captions] Transcribing voiceover with Whisper")
 
     captioner = WhisperCaptionGenerator(settings=settings)
-    result = captioner.transcribe(audio_path=ctx.voiceover_path)
-
-    ctx.word_timestamps = result.get("word_timestamps", result.get("segments", []))
+    # transcribe() returns list[dict] directly (word-level timestamps)
+    ctx.word_timestamps = captioner.transcribe(audio_path=ctx.voiceover_path)
 
     # Persist timestamps
     ts_path = ctx.work_dir / "word_timestamps.json"
@@ -360,12 +360,11 @@ def stage_thumbnail(ctx: PipelineContext, settings: Settings) -> None:
     title = ctx.script.get("title", ctx.topic)
     thumbnail_config = ctx.channel_profile.thumbnail
 
-    result = generator.generate(
+    # generate() returns a Path directly
+    ctx.thumbnail_path = Path(generator.generate(
         prompt=f"YouTube thumbnail for: {title}. Style: {thumbnail_config.style}",
         output_path=ctx.work_dir / "thumbnail.png",
-    )
-
-    ctx.thumbnail_path = Path(result["path"])
+    ))
 
     logger.info("[thumbnail] Saved to %s", ctx.thumbnail_path)
 
@@ -376,6 +375,7 @@ def stage_thumbnail(ctx: PipelineContext, settings: Settings) -> None:
 
 def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
     """Upload the finished video and thumbnail to YouTube."""
+    from vidmation.services.youtube.auth import get_credentials
     from vidmation.services.youtube.uploader import YouTubeUploader
 
     if ctx.final_video_path is None:
@@ -385,11 +385,19 @@ def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
 
     logger.info("[upload] Uploading video to YouTube")
 
-    uploader = YouTubeUploader(settings=settings)
+    # Resolve OAuth credentials from disk (token cached next to work_dir)
+    token_path = settings.data_dir / "youtube_token.json"
+    client_secret_path = settings.data_dir / "client_secret.json"
+    credentials = get_credentials(
+        token_path=token_path,
+        client_secret_path=client_secret_path,
+    )
+
+    uploader = YouTubeUploader(credentials=credentials)
 
     yt_config = ctx.channel_profile.youtube
 
-    result = uploader.upload(
+    video_id = uploader.upload(
         video_path=ctx.final_video_path,
         title=ctx.script.get("title", ctx.topic),
         description=ctx.script.get("description", ""),
@@ -399,11 +407,7 @@ def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
         thumbnail_path=ctx.thumbnail_path,
     )
 
-    logger.info(
-        "[upload] Uploaded — YouTube ID: %s, URL: %s",
-        result.get("video_id"),
-        result.get("url"),
-    )
+    logger.info("[upload] Uploaded — YouTube video_id=%s", video_id)
 
 
 # ---------------------------------------------------------------------------

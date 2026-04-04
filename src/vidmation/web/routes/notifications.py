@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from vidmation.notifications.manager import NotificationManager
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 

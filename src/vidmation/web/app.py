@@ -10,14 +10,29 @@ from fastapi.templating import Jinja2Templates
 
 from vidmation.api.v1.router import router as api_v1_router
 from vidmation.db.engine import init_db
-from vidmation.web.routes import analytics, api, channels, content, dashboard, jobs, notifications, schedule, videos, voices
+from vidmation.web.templating import get_templates  # noqa: F401 — re-exported for back-compat
 
-TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    # Import route modules here (after templating is available) to avoid
+    # the circular-import caused by routes importing get_templates from this
+    # module before it is fully initialised.
+    from vidmation.web.routes import (  # noqa: PLC0415
+        analytics,
+        api,
+        channels,
+        content,
+        dashboard,
+        jobs,
+        notifications,
+        schedule,
+        videos,
+        voices,
+    )
+
     app = FastAPI(
         title="VIDMATION",
         description="AI-powered faceless YouTube video automation",
@@ -46,8 +61,3 @@ def create_app() -> FastAPI:
     app.include_router(api_v1_router, prefix="/api/v1")
 
     return app
-
-
-def get_templates() -> Jinja2Templates:
-    """Get Jinja2 templates instance."""
-    return Jinja2Templates(directory=str(TEMPLATES_DIR))

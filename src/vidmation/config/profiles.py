@@ -79,11 +79,19 @@ class ChannelProfile:
 
 
 def _dict_to_dataclass(cls: type, data: dict[str, Any]) -> Any:
-    """Recursively convert a dict to a nested dataclass."""
-    fieldtypes = {f.name: f.type for f in cls.__dataclass_fields__.values()}
+    """Recursively convert a dict to a nested dataclass.
+
+    Keys present in *data* that are not fields of *cls* are silently ignored
+    so that YAML profiles with extra/forward-compatible keys (e.g. ``brand_kit``,
+    ``export_platforms``) do not crash on load.
+    """
+    known_fields = {f.name for f in cls.__dataclass_fields__.values()}
     kwargs = {}
     for key, value in data.items():
-        if key in fieldtypes and isinstance(value, dict):
+        if key not in known_fields:
+            # Silently skip unrecognised top-level keys
+            continue
+        if isinstance(value, dict):
             # Find the actual dataclass type for nested fields
             field_type = cls.__dataclass_fields__[key].type
             # Resolve the type if it's a string annotation

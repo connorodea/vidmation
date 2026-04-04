@@ -15,7 +15,7 @@ from vidmation.config.settings import get_settings
 from vidmation.db.engine import get_session
 from vidmation.db.repos import ChannelRepo
 from vidmation.queue.tasks import enqueue_video
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 

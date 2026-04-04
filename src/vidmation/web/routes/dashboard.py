@@ -9,7 +9,7 @@ from vidmation.db.engine import get_session
 from vidmation.db.repos import ChannelRepo, JobRepo, VideoRepo
 from vidmation.models.job import JobStatus
 from vidmation.models.video import VideoStatus
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 

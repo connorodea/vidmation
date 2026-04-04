@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from vidmation.db.engine import get_session
 from vidmation.db.repos import JobRepo
 from vidmation.models.job import JobStatus
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 

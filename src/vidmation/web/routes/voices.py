@@ -14,7 +14,7 @@ from vidmation.config.settings import get_settings
 from vidmation.db.engine import get_session
 from vidmation.models.voice import Voice
 from vidmation.services.tts.voice_cloning import VoiceCloner
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 

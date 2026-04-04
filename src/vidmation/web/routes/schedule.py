@@ -12,7 +12,7 @@ from vidmation.db.repos import ChannelRepo, VideoRepo
 from vidmation.models.schedule import ScheduleStatus
 from vidmation.models.video import VideoStatus
 from vidmation.scheduling.advanced import AdvancedScheduler
-from vidmation.web.app import get_templates
+from vidmation.web.templating import get_templates
 
 router = APIRouter()
 
