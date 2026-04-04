@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Channels - VIDMATION{% endblock %}
-{% block nav_channels %}bg-gray-800 text-white{% endblock %}
+{% block nav_channels %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Channels</span>
+{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold tracking-tight">Channels</h1>
-        <a href="/channels/new" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+        <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Channels</h1>
+        <a href="/channels/new" class="inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors duration-150">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Add Channel
         </a>
@@ -15,34 +20,40 @@
     {% if channels %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {% for channel in channels %}
-        <a href="/channels/{{ channel.id }}" class="rounded-xl bg-gray-900 border border-gray-800 p-5 hover:border-gray-700 transition-colors">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="h-10 w-10 rounded-lg bg-brand-600/20 flex items-center justify-center">
-                    <span class="text-brand-400 font-bold">{{ channel.name[0]|upper }}</span>
+        <a href="/channels/{{ channel.id }}" class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6 hover:border-white/[0.15] transition-colors duration-150">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="h-10 w-10 rounded-lg bg-[#10a37f]/10 flex items-center justify-center">
+                    <span class="text-[#10a37f] font-semibold">{{ channel.name[0]|upper }}</span>
                 </div>
                 <div>
-                    <h3 class="font-medium text-white">{{ channel.name }}</h3>
-                    <p class="text-xs text-gray-500">{{ channel.profile_path }}</p>
+                    <h3 class="text-sm font-medium text-[#ececec]">{{ channel.name }}</h3>
+                    <p class="text-[11px] text-[#666]">{{ channel.profile_path }}</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 {% if channel.is_active %}
-                <span class="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">Active</span>
+                <span class="inline-flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#10a37f]"></span>
+                    <span class="text-[11px] text-[#999] font-medium">Active</span>
+                </span>
                 {% else %}
-                <span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500">Inactive</span>
+                <span class="inline-flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#666]"></span>
+                    <span class="text-[11px] text-[#666] font-medium">Inactive</span>
+                </span>
                 {% endif %}
                 {% if channel.youtube_channel_id %}
-                <span class="px-2 py-0.5 rounded text-xs bg-red-900/50 text-red-400">YouTube Linked</span>
+                <span class="text-[11px] text-[#666]">YouTube Linked</span>
                 {% endif %}
             </div>
         </a>
         {% endfor %}
     </div>
     {% else %}
-    <div class="rounded-xl bg-gray-900 border border-gray-800 p-12 text-center">
-        <p class="text-gray-400 text-lg">No channels yet</p>
-        <p class="mt-1 text-sm text-gray-500">Add a channel to start generating videos</p>
-        <a href="/channels/new" class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">Add Channel</a>
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] px-6 py-16 text-center">
+        <p class="text-sm text-[#999]">No channels yet</p>
+        <p class="mt-1 text-xs text-[#666]">Add a channel to start generating videos</p>
+        <a href="/channels/new" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors">Add Channel</a>
     </div>
     {% endif %}
 </div>

@@ -37,3 +37,8 @@ Thumbs.db
 # YouTube OAuth tokens
 *token*.json
 *client_secret*.json
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/

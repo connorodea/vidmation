@@ -1,103 +1,46 @@
 /* ============================================================
-   VIDMATION — Premium Dashboard Stylesheet
+   VIDMATION — OpenAI-Inspired Design System
    ============================================================
-   Custom effects that Tailwind utility classes cannot express.
-   Everything else should stay in Tailwind classes in the HTML.
+   Near-black surfaces, accent green (#10a37f), Inter typography.
+   Minimal decoration. Content-forward. Every pixel intentional.
    ============================================================ */
 
 /* ----------------------------------------------------------
-   1. Glass Morphism
+   1. CSS Custom Properties
    ---------------------------------------------------------- */
-.glass {
-  background: rgba(17, 17, 17, 0.6);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
+:root {
+  --bg:           #0d0d0d;
+  --surface:      #1a1a1a;
+  --surface-2:    #2a2a2a;
+  --border:       rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.15);
 
-.glass-subtle {
-  background: rgba(17, 17, 17, 0.45);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
+  --text-primary:   #ececec;
+  --text-secondary: #999999;
+  --text-muted:     #666666;
 
-.glass-card {
-  background: rgba(23, 23, 23, 0.65);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
+  --accent:        #10a37f;
+  --accent-hover:  #1a7f64;
+  --accent-subtle: rgba(16,163,127,0.12);
 
-.glass-card:hover {
-  border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.1),
-              0 8px 32px rgba(0, 0, 0, 0.3);
+  --success: #10a37f;
+  --warning: #f59e0b;
+  --error:   #ef4444;
+  --info:    #6366f1;
 }
 
 /* ----------------------------------------------------------
-   2. Gradient Borders on Hover
+   2. Base & Font Smoothing
    ---------------------------------------------------------- */
-.gradient-border {
-  position: relative;
-  border: 1px solid transparent;
-  background-clip: padding-box;
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0) 0%,
-    rgba(99, 102, 241, 0) 100%
-  );
-  z-index: -1;
-  transition: background 0.3s ease;
-  pointer-events: none;
-}
-
-.gradient-border:hover::before {
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.4) 0%,
-    rgba(168, 85, 247, 0.2) 50%,
-    rgba(99, 102, 241, 0.1) 100%
-  );
-}
+[x-cloak] { display: none !important; }
 
 /* ----------------------------------------------------------
-   3. Pulse Animation for Active Jobs
-   ---------------------------------------------------------- */
-@keyframes pulse-brand {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.animate-pulse-brand {
-  animation: pulse-brand 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.8);
-    opacity: 0.3;
-  }
-}
-
-.pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-/* ----------------------------------------------------------
-   4. Custom Scrollbar (Webkit + Firefox)
+   3. Custom Scrollbar
    ---------------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 6px;
@@ -109,55 +52,42 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
 /* ----------------------------------------------------------
-   5. Smooth Transitions
+   4. Pulse Animations
    ---------------------------------------------------------- */
-.transition-smooth {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-.transition-layout {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
-/* Sidebar collapse */
-.sidebar-expanded {
-  width: 16rem; /* 256px */
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+@keyframes pulse-accent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-.sidebar-collapsed {
-  width: 4.5rem; /* 72px */
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sidebar-collapsed .sidebar-label {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
-  transition: opacity 0.15s ease, width 0.3s ease;
-}
-
-.sidebar-expanded .sidebar-label {
-  opacity: 1;
-  transition: opacity 0.2s ease 0.1s;
+.animate-pulse-accent {
+  animation: pulse-accent 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* ----------------------------------------------------------
-   6. Stat Card Shimmer / Skeleton
+   5. Skeleton Loading
    ---------------------------------------------------------- */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
@@ -167,9 +97,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.08) 40%,
-    rgba(255, 255, 255, 0.04) 80%
+    rgba(255,255,255,0.03) 0%,
+    rgba(255,255,255,0.06) 40%,
+    rgba(255,255,255,0.03) 80%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -177,21 +107,21 @@
 }
 
 /* ----------------------------------------------------------
-   7. Command Palette Overlay
+   6. Command Palette Backdrop
    ---------------------------------------------------------- */
 .command-palette-backdrop {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.60);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
 /* ----------------------------------------------------------
-   8. Toast Animations
+   7. Toast Animations
    ---------------------------------------------------------- */
 @keyframes toast-enter {
   0% {
     opacity: 0;
-    transform: translateY(-12px) scale(0.96);
+    transform: translateY(-8px) scale(0.98);
   }
   100% {
     opacity: 1;
@@ -206,37 +136,33 @@
   }
   100% {
     opacity: 0;
-    transform: translateY(-12px) scale(0.96);
+    transform: translateY(-8px) scale(0.98);
   }
 }
 
 .toast-enter {
-  animation: toast-enter 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+  animation: toast-enter 0.2s ease-out forwards;
 }
 
 .toast-leave {
-  animation: toast-leave 0.2s ease-in forwards;
+  animation: toast-leave 0.15s ease-in forwards;
 }
 
 /* ----------------------------------------------------------
-   9. Progress Bar Glow
+   8. Activity Feed Timeline
    ---------------------------------------------------------- */
-.progress-glow {
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4),
-              0 0 2px rgba(99, 102, 241, 0.6);
+.activity-line {
+  position: relative;
 }
 
-/* ----------------------------------------------------------
-   10. Activity Feed
-   ---------------------------------------------------------- */
 .activity-line::before {
   content: '';
   position: absolute;
-  left: 19px;
-  top: 36px;
+  left: 15px;
+  top: 32px;
   bottom: 0;
   width: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--border);
 }
 
 .activity-line:last-child::before {
@@ -244,42 +170,43 @@
 }
 
 /* ----------------------------------------------------------
-   11. Sparkline Mini Charts
+   9. Focus States (Accessibility)
    ---------------------------------------------------------- */
-.sparkline-path {
-  fill: none;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+*:focus-visible {
+  outline: 2px solid rgba(16, 163, 127, 0.7);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.sparkline-area {
-  opacity: 0.1;
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(16, 163, 127, 0.7);
+  outline-offset: 2px;
 }
 
 /* ----------------------------------------------------------
-   12. Format Thumbnails
+   10. Page Enter Animation
    ---------------------------------------------------------- */
-.thumb-landscape {
-  width: 48px;
-  height: 27px;
-  border-radius: 4px;
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.thumb-portrait {
-  width: 27px;
-  height: 48px;
-  border-radius: 4px;
-}
-
-.thumb-short {
-  width: 27px;
-  height: 48px;
-  border-radius: 4px;
+.page-enter {
+  animation: page-enter 0.2s ease-out;
 }
 
 /* ----------------------------------------------------------
-   13. Workflow Step Indicator
+   11. Step Connector (New Video wizard)
    ---------------------------------------------------------- */
 .step-connector {
   position: relative;
@@ -291,13 +218,13 @@
   top: 50%;
   left: 100%;
   width: 100%;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  height: 1px;
+  background: var(--border);
   transform: translateY(-50%);
 }
 
 .step-connector.active::after {
-  background: rgba(99, 102, 241, 0.4);
+  background: rgba(16, 163, 127, 0.4);
 }
 
 .step-connector:last-child::after {
@@ -305,27 +232,8 @@
 }
 
 /* ----------------------------------------------------------
-   14. Focus States (Accessibility)
+   12. Progress Bar
    ---------------------------------------------------------- */
-*:focus-visible {
-  outline: 2px solid rgba(99, 102, 241, 0.8);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid rgba(99, 102, 241, 0.8);
-  outline-offset: 2px;
-}
-
-/* ----------------------------------------------------------
-   15. Font Smoothing
-   ---------------------------------------------------------- */
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.progress-bar {
+  transition: width 0.5s ease;
 }
