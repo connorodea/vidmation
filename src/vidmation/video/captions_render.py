@@ -1,9 +1,20 @@
 """Caption rendering -- ASS subtitle generation and burn-in.
 
-Supports three visual styles:
+Supports three visual styles (legacy):
 - **bold_centered**: Large centered text for TikTok / YouTube Shorts.
 - **subtitle_bottom**: Traditional bottom-of-screen subtitles.
 - **karaoke**: Word-by-word highlight with pop-in animation.
+
+And 35+ animated caption templates via :func:`render_with_template`::
+
+    from vidmation.video.captions_render import render_with_template
+
+    output = render_with_template(
+        words=whisper_words,
+        template_name="hormozi",
+        video_path=Path("input.mp4"),
+        output_path=Path("captioned.mp4"),
+    )
 """
 
 from __future__ import annotations

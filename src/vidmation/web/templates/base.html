@@ -151,6 +151,33 @@
                     </svg>
                     <span class="sidebar-label whitespace-nowrap" :class="sidebarCollapsed ? 'hidden' : ''">Voices</span>
                 </a>
+
+                <p class="px-3 pt-4 pb-2 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap overflow-hidden"
+                   :class="sidebarCollapsed ? 'opacity-0 h-0 py-0' : 'opacity-100'">
+                    Planning
+                </p>
+
+                {# Content Calendar #}
+                <a href="/content"
+                   class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 {% block nav_content %}text-gray-400 hover:bg-white/[0.04] hover:text-white{% endblock %}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   title="Content Calendar">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="sidebar-label whitespace-nowrap" :class="sidebarCollapsed ? 'hidden' : ''">Content</span>
+                </a>
+
+                {# Series #}
+                <a href="/content/series"
+                   class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 {% block nav_series %}text-gray-400 hover:bg-white/[0.04] hover:text-white{% endblock %}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   title="Series">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    <span class="sidebar-label whitespace-nowrap" :class="sidebarCollapsed ? 'hidden' : ''">Series</span>
+                </a>
             </nav>
 
             {# Sidebar footer #}
