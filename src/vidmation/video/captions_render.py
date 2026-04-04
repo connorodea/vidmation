@@ -375,3 +375,131 @@ def burn_captions(
 
     logger.info("Captioned video written: %s", output_path)
     return output_path
+
+
+# ---------------------------------------------------------------------------
+# Template-based animated captions (new system)
+# ---------------------------------------------------------------------------
+
+def render_with_template(
+    words: list[dict],
+    template_name: str,
+    video_path: Path,
+    output_path: Path,
+    *,
+    video_width: int | None = None,
+    video_height: int | None = None,
+    template_overrides: dict | None = None,
+) -> Path:
+    """Generate and burn animated captions using a named template.
+
+    This is the high-level entry point that combines the new
+    :class:`~vidmation.captions.animator.CaptionAnimator` with template
+    selection and ffmpeg burn-in -- replacing the basic caption workflow
+    with the full Submagic-style animated version.
+
+    Parameters:
+        words: List of ``{"word": str, "start": float, "end": float}``
+            dicts (typically from Whisper transcription).
+        template_name: Name of a registered caption template (e.g.
+            ``"hormozi"``, ``"mrbeast"``, ``"tiktok_viral"``).
+        video_path: Source video file.
+        output_path: Destination for the captioned video.
+        video_width: Video width in pixels.  If ``None``, auto-detected
+            from *video_path* via ffprobe.
+        video_height: Video height in pixels.  If ``None``, auto-detected
+            from *video_path* via ffprobe.
+        template_overrides: Optional dict of field overrides to apply to
+            the template (e.g. ``{"font_size": 72, "animation": "fade"}``).
+
+    Returns:
+        *output_path* on success.
+
+    Raises:
+        ValueError: If *words* is empty or *template_name* is unknown.
+        FileNotFoundError: If *video_path* does not exist.
+        FFmpegError: On ffmpeg failure.
+    """
+    from vidmation.captions.animator import CaptionAnimator
+    from vidmation.captions.templates import get_template
+    from vidmation.utils.ffmpeg import get_resolution
+
+    video_path = Path(video_path)
+    output_path = Path(output_path)
+
+    if not video_path.exists():
+        raise FileNotFoundError(f"Video file not found: {video_path}")
+
+    # Resolve video dimensions
+    if video_width is None or video_height is None:
+        detected_w, detected_h = get_resolution(video_path)
+        video_width = video_width or detected_w
+        video_height = video_height or detected_h
+
+    # Load and optionally customise template
+    template = get_template(template_name)
+    if template_overrides:
+        template = template.copy(**template_overrides)
+
+    # Generate animated ASS file
+    ass_path = output_path.with_suffix(".ass")
+    animator = CaptionAnimator()
+    animator.generate(
+        words=words,
+        template=template,
+        video_width=video_width,
+        video_height=video_height,
+        output_path=ass_path,
+    )
+
+    # Burn into video
+    captioned_path = burn_captions(video_path, ass_path, output_path)
+
+    logger.info(
+        "Template caption render complete: template=%s, output=%s",
+        template_name,
+        captioned_path,
+    )
+    return captioned_path
+
+
+def generate_animated_ass(
+    words: list[dict],
+    output_path: Path,
+    template_name: str = "hormozi",
+    video_width: int = 1920,
+    video_height: int = 1080,
+    **template_overrides: object,
+) -> Path:
+    """Generate an animated ASS file without burning into video.
+
+    Convenience wrapper around :class:`~vidmation.captions.animator.CaptionAnimator`
+    for cases where you only need the subtitle file (e.g. for preview
+    or manual ffmpeg pipeline).
+
+    Parameters:
+        words: Word-level timestamps.
+        output_path: Where to write the ``.ass`` file.
+        template_name: Template to use.
+        video_width: Target video width.
+        video_height: Target video height.
+        **template_overrides: Field overrides on the template.
+
+    Returns:
+        The *output_path* that was written to.
+    """
+    from vidmation.captions.animator import CaptionAnimator
+    from vidmation.captions.templates import get_template
+
+    template = get_template(template_name)
+    if template_overrides:
+        template = template.copy(**template_overrides)
+
+    animator = CaptionAnimator()
+    return animator.generate(
+        words=words,
+        template=template,
+        video_width=video_width,
+        video_height=video_height,
+        output_path=Path(output_path),
+    )

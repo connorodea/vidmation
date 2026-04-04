@@ -14,7 +14,12 @@ from vidmation.video.audio_mixer import (
     mix_voiceover_and_music,
     normalize_audio,
 )
-from vidmation.video.captions_render import burn_captions, generate_ass_file
+from vidmation.video.captions_render import (
+    burn_captions,
+    generate_animated_ass,
+    generate_ass_file,
+    render_with_template,
+)
 from vidmation.video.formats import (
     FORMAT_REGISTRY,
     LANDSCAPE,
@@ -43,7 +48,9 @@ __all__ = [
     "normalize_audio",
     # captions_render
     "burn_captions",
+    "generate_animated_ass",
     "generate_ass_file",
+    "render_with_template",
     # formats
     "FORMAT_REGISTRY",
     "FormatSpec",
