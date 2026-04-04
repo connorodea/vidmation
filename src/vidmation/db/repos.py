@@ -89,13 +89,12 @@ class JobRepo:
         return self.session.get(Job, job_id)
 
     def claim_next(self) -> Job | None:
-        """Atomically claim the next queued job."""
+        """Claim the next queued job. SQLite-compatible (no SKIP LOCKED)."""
         stmt = (
             select(Job)
             .where(Job.status == JobStatus.QUEUED)
             .order_by(Job.created_at.asc())
             .limit(1)
-            .with_for_update(skip_locked=True)
         )
         job = self.session.scalars(stmt).first()
         if job:
