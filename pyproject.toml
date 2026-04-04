@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vidmation"
+version = "0.1.0"
+description = "AI-powered faceless YouTube video automation platform"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Connor O'Dea", email = "connor@quicklotz.com" },
+]
+dependencies = [
+    # Core
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.12",
+
+    # CLI
+    "typer[all]>=0.12",
+    "rich>=13.0",
+
+    # Web
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.7",
+
+    # AI / LLM
+    "anthropic>=0.40",
+    "openai>=1.50",
+
+    # TTS
+    "elevenlabs>=1.0",
+
+    # AI Model Platforms
+    "replicate>=0.25",
+    "fal-client>=0.4",
+
+    # Media
+    "ffmpeg-python>=0.2.0",
+    "pydub>=0.25",
+    "Pillow>=10.0",
+
+    # Speech-to-text (captions)
+    "openai-whisper>=20240930",
+
+    # HTTP
+    "httpx>=0.27",
+
+    # Utils
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=5.0", "rq>=1.16"]
+dev = ["pytest>=8.0", "pytest-asyncio", "ruff", "mypy"]
+
+[project.scripts]
+vidmation = "vidmation.cli.app:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vidmation"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

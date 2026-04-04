@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}New Video - VIDMATION{% endblock %}
+{% block nav_videos %}bg-gray-800 text-white{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold tracking-tight">Create New Video</h1>
+        <p class="mt-1 text-sm text-gray-400">Enter a topic and the AI pipeline will generate a complete video</p>
+    </div>
+
+    <form method="post" action="/videos/new" class="space-y-6">
+        <!-- Topic -->
+        <div>
+            <label for="topic" class="block text-sm font-medium text-gray-300 mb-2">Topic / Prompt</label>
+            <textarea
+                id="topic"
+                name="topic"
+                rows="3"
+                required
+                placeholder="e.g., 7 signs you are experiencing a spiritual awakening"
+                class="w-full rounded-lg bg-gray-900 border border-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
+            ></textarea>
+            <p class="mt-1 text-xs text-gray-500">Be specific about the topic. The AI will generate a full script, voiceover, and video.</p>
+        </div>
+
+        <!-- Channel -->
+        <div>
+            <label for="channel_id" class="block text-sm font-medium text-gray-300 mb-2">Channel</label>
+            <select
+                id="channel_id"
+                name="channel_id"
+                required
+                class="w-full rounded-lg bg-gray-900 border border-gray-700 px-4 py-3 text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
+            >
+                {% for channel in channels %}
+                <option value="{{ channel.id }}">{{ channel.name }}</option>
+                {% endfor %}
+                {% if not channels %}
+                <option value="" disabled>No channels - create one first</option>
+                {% endif %}
+            </select>
+        </div>
+
+        <!-- Format -->
+        <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Video Format</label>
+            <div class="grid grid-cols-3 gap-3">
+                {% for fmt in formats %}
+                <label class="cursor-pointer">
+                    <input type="radio" name="format" value="{{ fmt }}" {% if fmt == 'landscape' %}checked{% endif %} class="peer hidden">
+                    <div class="rounded-lg border border-gray-700 p-4 text-center peer-checked:border-brand-500 peer-checked:bg-brand-900/20 hover:bg-gray-900 transition-colors">
+                        <div class="text-sm font-medium text-white capitalize">{{ fmt }}</div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            {% if fmt == 'landscape' %}1920x1080
+                            {% elif fmt == 'portrait' %}1080x1920
+                            {% else %}1080x1920 (&lt;60s){% endif %}
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex gap-3">
+            <button
+                type="submit"
+                class="flex-1 rounded-lg bg-brand-600 px-6 py-3 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+            >
+                Generate Video
+            </button>
+            <a href="/videos" class="rounded-lg border border-gray-700 px-6 py-3 text-sm font-medium text-gray-300 hover:bg-gray-800 transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

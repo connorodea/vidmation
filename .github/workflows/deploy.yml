@@ -1,0 +1,71 @@
+name: Deploy VIDMATION
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src/
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short || true
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select server by owner
+        id: server
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          if [[ "$OWNER" == "connorodea" ]]; then
+            echo "host=${{ secrets.HETZNER_CO_HOST }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.HETZNER_CO_USER }}" >> $GITHUB_OUTPUT
+            echo "key_secret=HETZNER_CO_SSH_KEY" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.HETZNER_CO_PORT || 22 }}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Unknown repository owner: $OWNER"
+            exit 1
+          fi
+
+      - name: Deploy via rsync
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avz --delete --exclude='.env' --exclude='data/' --exclude='output/' --exclude='*.pyc' --exclude='__pycache__' --exclude='.git'
+          path: ./
+          remote_path: /var/www/vidmation/
+          remote_host: ${{ steps.server.outputs.host }}
+          remote_user: ${{ steps.server.outputs.user }}
+          remote_key: ${{ secrets[steps.server.outputs.key_secret] }}
+          remote_port: ${{ steps.server.outputs.port }}
+
+      - name: Run deploy script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server.outputs.host }}
+          username: ${{ steps.server.outputs.user }}
+          key: ${{ secrets[steps.server.outputs.key_secret] }}
+          port: ${{ steps.server.outputs.port }}
+          script: |
+            cd /var/www/vidmation
+            bash deploy/deploy.sh

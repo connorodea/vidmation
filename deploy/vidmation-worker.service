@@ -1,0 +1,16 @@
+[Unit]
+Description=VIDMATION Job Worker
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/vidmation
+ExecStart=/usr/local/bin/python -m vidmation worker
+Restart=always
+RestartSec=10
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target

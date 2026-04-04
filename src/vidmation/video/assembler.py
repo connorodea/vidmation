@@ -1,0 +1,570 @@
+"""Main video assembly engine for VIDMATION.
+
+Orchestrates clip fitting, transitions, audio mixing, caption burn-in,
+and final encoding into a single cohesive video file.
+"""
+
+from __future__ import annotations
+
+import logging
+import random
+from pathlib import Path
+from typing import Any
+
+import ffmpeg
+
+from vidmation.config.profiles import VideoConfig
+from vidmation.utils.ffmpeg import FFmpegError, get_duration, get_resolution
+from vidmation.video.audio_mixer import get_audio_duration, mix_voiceover_and_music
+from vidmation.video.captions_render import burn_captions, generate_ass_file
+from vidmation.video.formats import FormatSpec, get_format
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Helpers for section timing
+# ---------------------------------------------------------------------------
+
+def _compute_section_timings(
+    sections: list[dict],
+    word_timestamps: list[dict],
+    total_duration: float,
+) -> list[dict]:
+    """Assign a start/end time to each section based on word timestamps.
+
+    Each *section* dict is expected to have a ``"text"`` key whose word count
+    is used to proportionally divide the total voiceover duration.  If the
+    sections carry explicit ``"start"``/``"end"`` keys they are used directly.
+
+    Returns:
+        A list of dicts with ``"start"`` and ``"end"`` (float seconds) added.
+    """
+    # If sections already have timing info, honour it
+    if sections and "start" in sections[0] and "end" in sections[0]:
+        return sections
+
+    # Otherwise, split proportionally by word count
+    word_counts = []
+    for sec in sections:
+        text = sec.get("text", sec.get("narration", ""))
+        word_counts.append(max(1, len(text.split())))
+
+    total_words = sum(word_counts)
+    cursor = 0.0
+    timed: list[dict] = []
+    for sec, wc in zip(sections, word_counts):
+        duration = (wc / total_words) * total_duration
+        entry = dict(sec)
+        entry["start"] = cursor
+        entry["end"] = cursor + duration
+        timed.append(entry)
+        cursor += duration
+
+    return timed
+
+
+def _media_is_image(path: Path) -> bool:
+    """Return True if *path* looks like a still image file."""
+    return path.suffix.lower() in {
+        ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp",
+    }
+
+
+# ---------------------------------------------------------------------------
+# VideoAssembler
+# ---------------------------------------------------------------------------
+
+class VideoAssembler:
+    """End-to-end video assembly engine.
+
+    Takes pre-generated assets (media clips, voiceover, word timestamps,
+    optional music) and produces a fully rendered video with transitions,
+    mixed audio, and burned-in captions.
+    """
+
+    def __init__(self, video_config: VideoConfig, work_dir: Path) -> None:
+        self.video_config = video_config
+        self.work_dir = Path(work_dir)
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+
+        self.format_spec: FormatSpec = get_format(video_config.format)
+        logger.info(
+            "VideoAssembler initialised: format=%s (%s), transition=%s, work_dir=%s",
+            self.format_spec.name,
+            self.format_spec.resolution,
+            video_config.transition,
+            self.work_dir,
+        )
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def assemble(
+        self,
+        sections: list[dict],
+        voiceover_path: Path,
+        word_timestamps: list[dict],
+        music_path: Path | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Assemble the final video from pipeline artifacts.
+
+        Parameters:
+            sections: Ordered list of section dicts.  Each must contain
+                ``"media_path"`` (str or Path) pointing to the visual asset
+                and ``"text"`` or ``"narration"`` for timing proportions.
+            voiceover_path: Path to the voiceover audio file.
+            word_timestamps: List of ``{"word": str, "start": float, "end": float}``
+                dicts for caption generation.
+            music_path: Optional background music file.
+            output_path: Where to write the final video.  If ``None``, a path
+                is generated inside *work_dir*.
+
+        Returns:
+            Path to the rendered video.
+
+        Raises:
+            FileNotFoundError: If required input files are missing.
+            FFmpegError: On any ffmpeg failure.
+            ValueError: If *sections* is empty.
+        """
+        if not sections:
+            raise ValueError("Cannot assemble a video with zero sections")
+
+        voiceover_path = Path(voiceover_path)
+        if not voiceover_path.exists():
+            raise FileNotFoundError(f"Voiceover not found: {voiceover_path}")
+
+        if output_path is None:
+            output_path = self.work_dir / "final_output.mp4"
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        logger.info("=== Video assembly started (%d sections) ===", len(sections))
+
+        # 1. Determine timing
+        vo_duration = get_audio_duration(voiceover_path)
+        logger.info("Voiceover duration: %.2fs", vo_duration)
+
+        timed_sections = _compute_section_timings(sections, word_timestamps, vo_duration)
+
+        # 2. Prepare individual visual clips
+        clip_paths: list[Path] = []
+        durations: list[float] = []
+
+        for idx, sec in enumerate(timed_sections):
+            sec_dur = sec["end"] - sec["start"]
+            media_path = Path(sec["media_path"])
+            if not media_path.exists():
+                raise FileNotFoundError(
+                    f"Media asset not found for section {idx}: {media_path}"
+                )
+
+            logger.info(
+                "Section %d/%d: %.2fs, media=%s",
+                idx + 1,
+                len(timed_sections),
+                sec_dur,
+                media_path.name,
+            )
+
+            if _media_is_image(media_path):
+                clip_path = self._render_ken_burns(media_path, sec_dur, idx)
+            else:
+                clip_path = self._render_fitted_clip(media_path, sec_dur, idx)
+
+            clip_paths.append(clip_path)
+            durations.append(sec_dur)
+
+        # 3. Join clips with transitions
+        logger.info("Building visual timeline with transition=%s", self.video_config.transition)
+        timeline_path = self._build_timeline(clip_paths, durations)
+
+        # 4. Mix audio
+        logger.info("Mixing audio (voiceover + music)")
+        mixed_audio_path = self.work_dir / "mixed_audio.aac"
+        mixed_audio_path = mix_voiceover_and_music(
+            voiceover_path=voiceover_path,
+            music_path=music_path,
+            music_volume=0.15,
+            output_path=mixed_audio_path,
+        )
+
+        # 5. Combine video + audio
+        logger.info("Muxing video + audio")
+        muxed_path = self.work_dir / "muxed.mp4"
+        self._mux_video_audio(timeline_path, mixed_audio_path, muxed_path)
+
+        # 6. Burn captions
+        if word_timestamps:
+            logger.info("Generating captions (%d words)", len(word_timestamps))
+            ass_path = self.work_dir / "captions.ass"
+            generate_ass_file(
+                words=word_timestamps,
+                output_path=ass_path,
+                style=self._resolve_caption_style(),
+                animation=self._resolve_caption_animation(),
+            )
+            logger.info("Burning captions into video")
+            burn_captions(muxed_path, ass_path, output_path)
+        else:
+            # No captions -- just copy muxed result
+            logger.info("No word timestamps; skipping captions")
+            self._copy_file(muxed_path, output_path)
+
+        logger.info("=== Assembly complete: %s ===", output_path)
+        return output_path
+
+    # ------------------------------------------------------------------
+    # Internal: clip preparation
+    # ------------------------------------------------------------------
+
+    def _render_fitted_clip(
+        self,
+        clip_path: Path,
+        target_duration: float,
+        section_idx: int,
+    ) -> Path:
+        """Trim or speed-adjust a video clip to match *target_duration*.
+
+        The clip is also scaled/padded to match the format resolution.
+
+        Returns:
+            Path to the rendered clip segment.
+        """
+        out_path = self.work_dir / f"section_{section_idx:03d}_video.mp4"
+        clip_duration = get_duration(clip_path)
+        w, h = self.format_spec.width, self.format_spec.height
+        fps = self.format_spec.fps
+
+        stream = ffmpeg.input(str(clip_path))
+
+        if clip_duration > target_duration * 1.5:
+            # Much longer -- trim from a random start point
+            max_start = max(0.0, clip_duration - target_duration)
+            start_point = random.uniform(0, max_start)
+            stream = ffmpeg.input(str(clip_path), ss=start_point, t=target_duration)
+        elif clip_duration > target_duration:
+            # Slightly longer -- just trim
+            stream = ffmpeg.input(str(clip_path), t=target_duration)
+        elif clip_duration < target_duration * 0.5:
+            # Much shorter -- slow down (within reason: min 0.5x speed)
+            speed_factor = max(0.5, clip_duration / target_duration)
+            pts_factor = 1.0 / speed_factor
+            stream = stream.filter("setpts", f"{pts_factor}*PTS")
+            stream = stream.filter("atrim", duration=target_duration)
+        # Otherwise close enough -- minor trim handles the rest
+
+        # Scale + pad to target resolution (letterbox/pillarbox)
+        stream = stream.filter(
+            "scale",
+            w,
+            h,
+            force_original_aspect_ratio="decrease",
+        )
+        stream = stream.filter(
+            "pad",
+            w,
+            h,
+            "(ow-iw)/2",
+            "(oh-ih)/2",
+            color="black",
+        )
+        stream = stream.filter("fps", fps=fps)
+        stream = stream.filter("setsar", "1")
+
+        try:
+            (
+                stream
+                .output(
+                    str(out_path),
+                    vcodec="libx264",
+                    crf="20",
+                    preset="fast",
+                    pix_fmt="yuv420p",
+                    t=target_duration,
+                    an=None,  # strip audio -- we mix separately
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+        except ffmpeg.Error as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+            raise FFmpegError(
+                f"Failed to fit clip {clip_path.name}: {stderr}"
+            ) from exc
+
+        logger.debug("Fitted clip: %s -> %s (%.2fs)", clip_path.name, out_path.name, target_duration)
+        return out_path
+
+    def _render_ken_burns(
+        self,
+        image_path: Path,
+        duration: float,
+        section_idx: int,
+    ) -> Path:
+        """Apply a Ken Burns (slow zoom + pan) effect to a still image.
+
+        Returns:
+            Path to the rendered video segment.
+        """
+        out_path = self.work_dir / f"section_{section_idx:03d}_image.mp4"
+        w, h = self.format_spec.width, self.format_spec.height
+        fps = self.format_spec.fps
+        total_frames = int(duration * fps)
+
+        # Decide zoom direction: 1.0 -> 1.15 (zoom in) or 1.15 -> 1.0 (zoom out)
+        zoom_in = random.choice([True, False])
+        if zoom_in:
+            zoom_expr = f"min(1+0.15*on/{total_frames},1.15)"
+        else:
+            zoom_expr = f"max(1.15-0.15*on/{total_frames},1.0)"
+
+        # Gentle pan towards centre
+        x_expr = f"iw/2-(iw/zoom/2)+((iw/zoom/2)-iw/2)*on/{total_frames}"
+        y_expr = f"ih/2-(ih/zoom/2)+((ih/zoom/2)-ih/2)*on/{total_frames}"
+
+        try:
+            (
+                ffmpeg
+                .input(str(image_path), loop=1, framerate=fps)
+                .filter("scale", w * 2, h * 2)  # upscale for headroom
+                .filter(
+                    "zoompan",
+                    z=zoom_expr,
+                    x=x_expr,
+                    y=y_expr,
+                    d=total_frames,
+                    s=f"{w}x{h}",
+                    fps=fps,
+                )
+                .filter("setsar", "1")
+                .output(
+                    str(out_path),
+                    vcodec="libx264",
+                    crf="20",
+                    preset="fast",
+                    pix_fmt="yuv420p",
+                    t=duration,
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+        except ffmpeg.Error as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+            raise FFmpegError(
+                f"Ken Burns effect failed for {image_path.name}: {stderr}"
+            ) from exc
+
+        logger.debug("Ken Burns: %s -> %s (%.2fs)", image_path.name, out_path.name, duration)
+        return out_path
+
+    # ------------------------------------------------------------------
+    # Internal: timeline assembly
+    # ------------------------------------------------------------------
+
+    def _build_timeline(
+        self,
+        clip_paths: list[Path],
+        durations: list[float],
+    ) -> Path:
+        """Join rendered clips with the configured transition.
+
+        For ``crossfade`` / ``slide_*`` transitions the ``xfade`` filter is
+        chained incrementally.  For ``cut`` / ``fade_black`` a simple concat
+        is used with optional per-clip fades.
+
+        Returns:
+            Path to the joined video file.
+        """
+        out_path = self.work_dir / "timeline.mp4"
+        transition = self.video_config.transition.lower().strip()
+        transition_dur = 0.5  # seconds
+
+        if len(clip_paths) == 1:
+            # Single clip -- just copy
+            self._copy_file(clip_paths[0], out_path)
+            return out_path
+
+        # ---- xfade-based transitions (crossfade, slide_left, slide_right) ----
+        if transition in ("crossfade", "slide_left", "slide_right"):
+            xfade_type = {
+                "crossfade": "fade",
+                "slide_left": "slideleft",
+                "slide_right": "slideright",
+            }[transition]
+
+            streams = [ffmpeg.input(str(p)) for p in clip_paths]
+            result = streams[0]
+            offset_acc = durations[0] - transition_dur
+
+            for i in range(1, len(streams)):
+                result = ffmpeg.filter(
+                    [result, streams[i]],
+                    "xfade",
+                    transition=xfade_type,
+                    duration=transition_dur,
+                    offset=max(0, offset_acc),
+                )
+                if i < len(streams) - 1:
+                    # Next offset accumulates (current segment minus overlap)
+                    offset_acc += durations[i] - transition_dur
+
+            try:
+                (
+                    result
+                    .output(
+                        str(out_path),
+                        vcodec="libx264",
+                        crf="18",
+                        preset="medium",
+                        pix_fmt="yuv420p",
+                    )
+                    .overwrite_output()
+                    .run(quiet=True)
+                )
+            except ffmpeg.Error as exc:
+                stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+                raise FFmpegError(f"Timeline xfade failed: {stderr}") from exc
+
+            return out_path
+
+        # ---- fade_black: per-clip fades then concat -------------------------
+        if transition == "fade_black":
+            faded_paths: list[Path] = []
+            for i, (cp, dur) in enumerate(zip(clip_paths, durations)):
+                faded_out = self.work_dir / f"faded_{i:03d}.mp4"
+                stream = ffmpeg.input(str(cp))
+                stream = stream.filter("fade", type="in", start_time=0, duration=0.4)
+                fade_start = max(0.0, dur - 0.4)
+                stream = stream.filter("fade", type="out", start_time=fade_start, duration=0.4)
+                try:
+                    (
+                        stream
+                        .output(
+                            str(faded_out),
+                            vcodec="libx264",
+                            crf="18",
+                            preset="fast",
+                            pix_fmt="yuv420p",
+                        )
+                        .overwrite_output()
+                        .run(quiet=True)
+                    )
+                except ffmpeg.Error as exc:
+                    stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+                    raise FFmpegError(f"Fade-black failed on clip {i}: {stderr}") from exc
+                faded_paths.append(faded_out)
+
+            self._concat_clips(faded_paths, out_path)
+            return out_path
+
+        # ---- cut (default): simple concat -----------------------------------
+        self._concat_clips(clip_paths, out_path)
+        return out_path
+
+    # ------------------------------------------------------------------
+    # Internal: concat via ffmpeg concat demuxer
+    # ------------------------------------------------------------------
+
+    def _concat_clips(self, clip_paths: list[Path], output_path: Path) -> None:
+        """Concatenate clips using the ffmpeg concat demuxer (no re-encode)."""
+        concat_list = self.work_dir / "concat_list.txt"
+        lines = [f"file '{p}'" for p in clip_paths]
+        concat_list.write_text("\n".join(lines), encoding="utf-8")
+
+        try:
+            (
+                ffmpeg
+                .input(str(concat_list), format="concat", safe=0)
+                .output(
+                    str(output_path),
+                    vcodec="libx264",
+                    crf="18",
+                    preset="medium",
+                    pix_fmt="yuv420p",
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+        except ffmpeg.Error as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+            raise FFmpegError(f"Clip concatenation failed: {stderr}") from exc
+
+    # ------------------------------------------------------------------
+    # Internal: mux video + audio
+    # ------------------------------------------------------------------
+
+    def _mux_video_audio(
+        self,
+        video_path: Path,
+        audio_path: Path,
+        output_path: Path,
+    ) -> None:
+        """Combine a video stream (no audio) with an audio file."""
+        video_stream = ffmpeg.input(str(video_path))
+        audio_stream = ffmpeg.input(str(audio_path))
+
+        try:
+            (
+                ffmpeg
+                .output(
+                    video_stream.video,
+                    audio_stream.audio,
+                    str(output_path),
+                    vcodec="copy",
+                    acodec="aac",
+                    audio_bitrate="192k",
+                    shortest=None,
+                    movflags="+faststart",
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+        except ffmpeg.Error as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+            raise FFmpegError(f"Video+audio mux failed: {stderr}") from exc
+
+    # ------------------------------------------------------------------
+    # Internal: caption style resolution
+    # ------------------------------------------------------------------
+
+    def _resolve_caption_style(self) -> dict:
+        """Build a caption style dict from the VideoConfig."""
+        return {
+            "font_name": self.video_config.caption_font,
+            "font_size": self.video_config.caption_font_size,
+            "primary_color": self.video_config.caption_color,
+            "outline_color": self.video_config.caption_outline_color,
+            "bold": True,
+        }
+
+    def _resolve_caption_animation(self) -> str:
+        """Choose caption animation based on caption_style config."""
+        style = self.video_config.caption_style.lower()
+        if style == "karaoke":
+            return "karaoke"
+        if style in ("pop_in", "pop-in", "popin"):
+            return "pop_in"
+        return "none"
+
+    # ------------------------------------------------------------------
+    # Internal: file copy
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _copy_file(src: Path, dst: Path) -> None:
+        """Copy a file from *src* to *dst*, re-encoding lightly with ffmpeg."""
+        try:
+            (
+                ffmpeg
+                .input(str(src))
+                .output(str(dst), codec="copy")
+                .overwrite_output()
+                .run(quiet=True)
+            )
+        except ffmpeg.Error as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+            raise FFmpegError(f"File copy failed ({src} -> {dst}): {stderr}") from exc

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Channels - VIDMATION{% endblock %}
+{% block nav_channels %}bg-gray-800 text-white{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold tracking-tight">Channels</h1>
+        <a href="/channels/new" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Channel
+        </a>
+    </div>
+
+    {% if channels %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for channel in channels %}
+        <a href="/channels/{{ channel.id }}" class="rounded-xl bg-gray-900 border border-gray-800 p-5 hover:border-gray-700 transition-colors">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="h-10 w-10 rounded-lg bg-brand-600/20 flex items-center justify-center">
+                    <span class="text-brand-400 font-bold">{{ channel.name[0]|upper }}</span>
+                </div>
+                <div>
+                    <h3 class="font-medium text-white">{{ channel.name }}</h3>
+                    <p class="text-xs text-gray-500">{{ channel.profile_path }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if channel.is_active %}
+                <span class="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">Active</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500">Inactive</span>
+                {% endif %}
+                {% if channel.youtube_channel_id %}
+                <span class="px-2 py-0.5 rounded text-xs bg-red-900/50 text-red-400">YouTube Linked</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-xl bg-gray-900 border border-gray-800 p-12 text-center">
+        <p class="text-gray-400 text-lg">No channels yet</p>
+        <p class="mt-1 text-sm text-gray-500">Add a channel to start generating videos</p>
+        <a href="/channels/new" class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">Add Channel</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

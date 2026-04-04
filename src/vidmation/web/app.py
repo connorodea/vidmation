@@ -1,0 +1,44 @@
+"""FastAPI application factory for the VIDMATION web dashboard."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from vidmation.db.engine import init_db
+from vidmation.web.routes import api, channels, dashboard, jobs, videos
+
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application."""
+    app = FastAPI(
+        title="VIDMATION",
+        description="AI-powered faceless YouTube video automation",
+        version="0.1.0",
+    )
+
+    # Initialize database tables
+    init_db()
+
+    # Mount static files
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    # Include routers
+    app.include_router(dashboard.router)
+    app.include_router(videos.router, prefix="/videos", tags=["videos"])
+    app.include_router(channels.router, prefix="/channels", tags=["channels"])
+    app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+    app.include_router(api.router, prefix="/api", tags=["api"])
+
+    return app
+
+
+def get_templates() -> Jinja2Templates:
+    """Get Jinja2 templates instance."""
+    return Jinja2Templates(directory=str(TEMPLATES_DIR))

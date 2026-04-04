@@ -1,0 +1,49 @@
+name: "Default Channel"
+niche: "educational"
+target_audience: "General audience interested in informative content"
+
+content:
+  tone: "informative, engaging, conversational"
+  script_style: "listicle"
+  typical_topics:
+    - "interesting facts"
+    - "how things work"
+    - "top 10 lists"
+  intro_hook_style: "question"
+  cta_style: "gentle"
+
+voice:
+  provider: "elevenlabs"
+  voice_id: ""
+  stability: 0.5
+  similarity_boost: 0.75
+  speed: 1.0
+
+video:
+  format: "landscape"
+  resolution: "1920x1080"
+  target_duration_min: 480
+  target_duration_max: 900
+  transition: "crossfade"
+  caption_style: "bold_centered"
+  caption_font: "Montserrat-Bold"
+  caption_color: "#FFFFFF"
+  caption_outline_color: "#000000"
+  caption_font_size: 48
+
+music:
+  genre: "ambient"
+  volume: 0.15
+  source: "local"
+
+thumbnail:
+  provider: "dalle"
+  style: "cinematic, dramatic lighting, bold text overlay"
+  include_text: true
+  text_position: "center"
+
+youtube:
+  visibility: "public"
+  category_id: "22"
+  default_language: "en"
+  schedule: null

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Videos - VIDMATION{% endblock %}
+{% block nav_videos %}bg-gray-800 text-white{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold tracking-tight">Videos</h1>
+        <a href="/videos/new" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Video
+        </a>
+    </div>
+
+    <!-- Status Filters -->
+    <div class="flex gap-2">
+        <a href="/videos" class="px-3 py-1.5 rounded-lg text-sm {% if not current_status %}bg-gray-700 text-white{% else %}text-gray-400 hover:bg-gray-800{% endif %}">All</a>
+        {% for status in statuses %}
+        <a href="/videos?status={{ status }}" class="px-3 py-1.5 rounded-lg text-sm {% if current_status == status %}bg-gray-700 text-white{% else %}text-gray-400 hover:bg-gray-800{% endif %}">{{ status|title }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- Video Table -->
+    {% if videos %}
+    <div class="overflow-hidden rounded-xl border border-gray-800">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-900">
+                <tr>
+                    <th class="px-4 py-3 text-left text-gray-400 font-medium">Title</th>
+                    <th class="px-4 py-3 text-left text-gray-400 font-medium">Channel</th>
+                    <th class="px-4 py-3 text-left text-gray-400 font-medium">Format</th>
+                    <th class="px-4 py-3 text-left text-gray-400 font-medium">Duration</th>
+                    <th class="px-4 py-3 text-left text-gray-400 font-medium">Status</th>
+                    <th class="px-4 py-3 text-left text-gray-400 font-medium">Created</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for video in videos %}
+                <tr class="hover:bg-gray-900/50 cursor-pointer" onclick="window.location='/videos/{{ video.id }}'">
+                    <td class="px-4 py-3 font-medium">{{ video.title or video.topic_prompt[:50] }}</td>
+                    <td class="px-4 py-3 text-gray-400">{{ video.channel.name }}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-0.5 rounded text-xs
+                            {% if video.format.value == 'landscape' %}bg-blue-900/50 text-blue-400
+                            {% elif video.format.value == 'portrait' %}bg-purple-900/50 text-purple-400
+                            {% else %}bg-orange-900/50 text-orange-400{% endif %}">
+                            {{ video.format.value }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-400">
+                        {% if video.duration_seconds %}
+                            {{ (video.duration_seconds // 60)|int }}:{{ '%02d' % (video.duration_seconds % 60)|int }}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-0.5 rounded text-xs
+                            {% if video.status.value == 'uploaded' %}bg-green-900/50 text-green-400
+                            {% elif video.status.value == 'generating' %}bg-brand-900/50 text-brand-400
+                            {% elif video.status.value == 'failed' %}bg-red-900/50 text-red-400
+                            {% elif video.status.value == 'ready' %}bg-yellow-900/50 text-yellow-400
+                            {% else %}bg-gray-800 text-gray-400{% endif %}">
+                            {{ video.status.value }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-400">{{ video.created_at.strftime('%b %d, %H:%M') if video.created_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="rounded-xl bg-gray-900 border border-gray-800 p-12 text-center">
+        <p class="text-gray-400 text-lg">No videos found</p>
+        <p class="mt-1 text-sm text-gray-500">Create your first AI-generated video</p>
+        <a href="/videos/new" class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">Create Video</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

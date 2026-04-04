@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - VIDMATION{% endblock %}
+{% block nav_dashboard %}bg-gray-800 text-white{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div>
+        <h1 class="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p class="mt-1 text-sm text-gray-400">Overview of your video automation pipeline</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Total Videos</p>
+            <p class="mt-2 text-3xl font-bold text-white">{{ stats.total_videos }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Uploaded</p>
+            <p class="mt-2 text-3xl font-bold text-green-400">{{ stats.uploaded_videos }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Active Jobs</p>
+            <p class="mt-2 text-3xl font-bold text-brand-500">{{ stats.active_jobs }}</p>
+        </div>
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-5">
+            <p class="text-sm font-medium text-gray-400">Channels</p>
+            <p class="mt-2 text-3xl font-bold text-white">{{ stats.channels }}</p>
+        </div>
+    </div>
+
+    <!-- Active Jobs -->
+    {% if active_jobs %}
+    <div>
+        <h2 class="text-lg font-semibold mb-3">Active Jobs</h2>
+        <div class="space-y-3">
+            {% for job in active_jobs %}
+            <div class="rounded-xl bg-gray-900 border border-gray-800 p-4"
+                 hx-get="/api/jobs/{{ job.id }}/progress"
+                 hx-trigger="every 3s"
+                 hx-swap="innerHTML"
+                 hx-target="#job-progress-{{ job.id }}">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium">{{ job.video.title or job.video.topic_prompt[:60] }}</p>
+                        <p class="text-sm text-gray-400">Stage: {{ job.current_stage }}</p>
+                    </div>
+                    <div id="job-progress-{{ job.id }}" class="text-right">
+                        <div class="text-sm font-medium text-brand-500">{{ job.progress_pct }}%</div>
+                        <div class="mt-1 w-32 bg-gray-800 rounded-full h-2">
+                            <div class="bg-brand-600 h-2 rounded-full transition-all" style="width: {{ job.progress_pct }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Queued Jobs -->
+    {% if queued_jobs %}
+    <div>
+        <h2 class="text-lg font-semibold mb-3">Queued</h2>
+        <div class="space-y-2">
+            {% for job in queued_jobs %}
+            <div class="rounded-lg bg-gray-900 border border-gray-800 p-3 flex items-center justify-between">
+                <span class="text-sm">{{ job.video.topic_prompt[:80] }}</span>
+                <span class="text-xs px-2 py-1 rounded-full bg-yellow-900/50 text-yellow-400">Queued</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Videos -->
+    <div>
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Recent Videos</h2>
+            <a href="/videos" class="text-sm text-brand-500 hover:text-brand-400">View all</a>
+        </div>
+        {% if recent_videos %}
+        <div class="overflow-hidden rounded-xl border border-gray-800">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-900">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Title</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Channel</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Format</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Status</th>
+                        <th class="px-4 py-3 text-left text-gray-400 font-medium">Created</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for video in recent_videos %}
+                    <tr class="hover:bg-gray-900/50 cursor-pointer" onclick="window.location='/videos/{{ video.id }}'">
+                        <td class="px-4 py-3 font-medium">{{ video.title or video.topic_prompt[:50] }}</td>
+                        <td class="px-4 py-3 text-gray-400">{{ video.channel.name }}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 rounded text-xs
+                                {% if video.format.value == 'landscape' %}bg-blue-900/50 text-blue-400
+                                {% elif video.format.value == 'portrait' %}bg-purple-900/50 text-purple-400
+                                {% else %}bg-orange-900/50 text-orange-400{% endif %}">
+                                {{ video.format.value }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 rounded text-xs
+                                {% if video.status.value == 'uploaded' %}bg-green-900/50 text-green-400
+                                {% elif video.status.value == 'generating' %}bg-brand-900/50 text-brand-400
+                                {% elif video.status.value == 'failed' %}bg-red-900/50 text-red-400
+                                {% elif video.status.value == 'ready' %}bg-yellow-900/50 text-yellow-400
+                                {% else %}bg-gray-800 text-gray-400{% endif %}">
+                                {{ video.status.value }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-400">{{ video.created_at.strftime('%b %d, %H:%M') if video.created_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="rounded-xl bg-gray-900 border border-gray-800 p-8 text-center">
+            <p class="text-gray-400">No videos yet. Create your first one!</p>
+            <a href="/videos/new" class="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+                Create Video
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

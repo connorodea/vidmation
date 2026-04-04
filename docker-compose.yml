@@ -1,0 +1,38 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./channel_profiles:/app/channel_profiles
+      - ./assets:/app/assets
+      - ./.env:/app/.env
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: ["python", "-m", "vidmation", "worker"]
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./channel_profiles:/app/channel_profiles
+      - ./assets:/app/assets
+      - ./.env:/app/.env
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:
