@@ -34,6 +34,7 @@ const navItems = [
   { label: "Content", href: "/content", icon: FileText },
   { label: "Voices", href: "/voices", icon: Mic2 },
   { label: "Schedule", href: "/schedule", icon: Calendar },
+  { label: "Settings", href: "/settings", icon: Cog },
 ];
 
 export function Sidebar() {
@@ -123,9 +124,11 @@ export function Sidebar() {
             <>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="icon" className="w-10 h-10">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <Link href="/videos/new">
+                    <Button size="icon" className="w-10 h-10">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">New Video</TooltipContent>
               </Tooltip>
@@ -144,10 +147,12 @@ export function Sidebar() {
             </>
           ) : (
             <>
-              <Button className="w-full gap-2" size="default">
-                <Plus className="h-4 w-4" />
-                New Video
-              </Button>
+              <Link href="/videos/new">
+                <Button className="w-full gap-2" size="default">
+                  <Plus className="h-4 w-4" />
+                  New Video
+                </Button>
+              </Link>
               <button
                 onClick={() => setCollapsed(true)}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#666] transition-colors hover:text-[#999] hover:bg-white/[0.03]"

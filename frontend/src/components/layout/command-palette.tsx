@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Search,
@@ -52,6 +53,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const filtered = defaultItems.filter((item) =>
     item.label.toLowerCase().includes(query.toLowerCase())
@@ -64,14 +66,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const handleSelect = useCallback(
     (item: CommandItem) => {
       if (item.href) {
-        window.location.href = item.href;
+        router.push(item.href);
       }
       item.action?.();
       onOpenChange(false);
       setQuery("");
       setActiveIndex(0);
     },
-    [onOpenChange]
+    [onOpenChange, router]
   );
 
   const handleKeyDown = useCallback(
