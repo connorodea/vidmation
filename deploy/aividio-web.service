@@ -1,0 +1,21 @@
+[Unit]
+Description=AIVidio Web Frontend (Next.js)
+After=network.target aividio-api.service
+Wants=aividio-api.service
+
+[Service]
+Type=exec
+User=root
+Group=root
+WorkingDirectory=/var/www/aividio/frontend
+Environment=NODE_ENV=production
+Environment=PORT=3002
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aividio-web
+
+[Install]
+WantedBy=multi-user.target

@@ -1,42 +1,56 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="/var/www/vidmation"
-SERVICE_WEB="vidmation-web"
-SERVICE_WORKER="vidmation-worker"
+APP_DIR="/var/www/aividio"
+SERVICE_API="aividio-api"
+SERVICE_WEB="aividio-web"
 
-echo "=== VIDMATION Deploy ==="
+echo "=== AIVidio Deploy ==="
 cd "$APP_DIR"
 
-# Detect package manager
-if [ -f "pnpm-lock.yaml" ]; then
-    echo "ERROR: This is a Python project, not Node.js"
-    exit 1
-fi
+# Install/update Python dependencies in venv
+echo "Installing Python dependencies..."
+.venv/bin/pip install -e . --quiet
 
-# Install Python dependencies
-echo "Installing dependencies..."
-pip install -e . 2>/dev/null || pip3 install -e .
+# Install/build frontend
+echo "Building frontend..."
+cd "$APP_DIR/frontend"
+npm install --silent
+npm run build
+cd "$APP_DIR"
 
-# Run database migrations if alembic is configured
-if [ -f "alembic.ini" ]; then
-    echo "Running database migrations..."
-    alembic upgrade head 2>/dev/null || echo "Alembic migration skipped (may need manual setup)"
-fi
-
-# Create required directories
-mkdir -p data output assets/fonts assets/music channel_profiles
+# Create required runtime directories
+mkdir -p data output assets/fonts assets/music channel_profiles logs
 
 # Restart services
 echo "Restarting services..."
-sudo systemctl restart "$SERVICE_WEB" || echo "Warning: $SERVICE_WEB not found"
-sudo systemctl restart "$SERVICE_WORKER" || echo "Warning: $SERVICE_WORKER not found"
+systemctl restart "$SERVICE_API"
+systemctl restart "$SERVICE_WEB"
+
+# Wait for startup
+sleep 5
 
 # Show status
 echo ""
 echo "=== Service Status ==="
-systemctl status "$SERVICE_WEB" --no-pager -l 2>/dev/null || true
+systemctl status "$SERVICE_API" --no-pager -l
 echo ""
-systemctl status "$SERVICE_WORKER" --no-pager -l 2>/dev/null || true
+systemctl status "$SERVICE_WEB" --no-pager -l
 echo ""
-echo "Deploy complete!"
+
+# Quick health check
+API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8001/docs 2>/dev/null || echo "000")
+WEB_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3002/ 2>/dev/null || echo "000")
+echo "API /docs: HTTP $API_STATUS"
+echo "Web /: HTTP $WEB_STATUS"
+
+if [[ "$API_STATUS" == "200" && "$WEB_STATUS" == "200" ]]; then
+    echo ""
+    echo "Deploy complete — aividio.com is live."
+else
+    echo ""
+    echo "WARNING: One or more health checks failed. Check logs with:"
+    echo "  journalctl -u aividio-api -n 50"
+    echo "  journalctl -u aividio-web -n 50"
+    exit 1
+fi

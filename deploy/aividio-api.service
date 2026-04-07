@@ -1,0 +1,20 @@
+[Unit]
+Description=AIVidio API Backend (FastAPI)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=exec
+User=root
+Group=root
+WorkingDirectory=/var/www/aividio
+EnvironmentFile=/var/www/aividio/.env
+ExecStart=/var/www/aividio/.venv/bin/uvicorn vidmation.web.app:create_app --factory --host 127.0.0.1 --port 8001 --workers 2
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aividio-api
+
+[Install]
+WantedBy=multi-user.target
