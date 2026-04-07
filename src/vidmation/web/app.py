@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from vidmation.api.v1.router import router as api_v1_router
+from vidmation.auth.routes import router as auth_router
 from vidmation.db.engine import init_db
 from vidmation.web.templating import get_templates  # noqa: F401 — re-exported for back-compat
 
@@ -34,8 +35,8 @@ def create_app() -> FastAPI:
     )
 
     app = FastAPI(
-        title="VIDMATION",
-        description="AI-powered faceless YouTube video automation",
+        title="AIVidio",
+        description="AI-powered faceless YouTube video automation — aividio.com",
         version="0.1.0",
     )
 
@@ -44,6 +45,9 @@ def create_app() -> FastAPI:
 
     # Mount static files
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    # --- Authentication (JWT) ---
+    app.include_router(auth_router, tags=["auth"])
 
     # Include routers
     app.include_router(dashboard.router)

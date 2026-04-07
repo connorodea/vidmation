@@ -18,6 +18,7 @@ from vidmation.models.analytics import (
     VideoAnalytics,
 )
 from vidmation.models.voice import Voice
+from vidmation.models.user import User, SubscriptionTier
 
 __all__ = [
     "Base",
@@ -45,4 +46,6 @@ __all__ = [
     "OperationType",
     "PeriodType",
     "Voice",
+    "User",
+    "SubscriptionTier",
 ]

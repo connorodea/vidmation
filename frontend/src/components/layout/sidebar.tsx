@@ -61,12 +61,12 @@ export function Sidebar() {
             collapsed && "justify-center px-0"
           )}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#10a37f] text-sm font-bold text-white">
-            V
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#10a37f] text-xs font-bold text-white tracking-tight">
+            Ai
           </div>
           {!collapsed && (
             <span className="text-sm font-semibold tracking-wide text-[#ececec]">
-              VIDMATION
+              AIVidio
             </span>
           )}
         </div>

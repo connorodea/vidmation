@@ -18,7 +18,7 @@ export function Header({ onOpenCommandPalette, className }: HeaderProps) {
     >
       {/* Left: Breadcrumb area */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-[#666]">VIDMATION</span>
+        <span className="text-[#666]">AIVidio</span>
       </div>
 
       {/* Right: Actions */}

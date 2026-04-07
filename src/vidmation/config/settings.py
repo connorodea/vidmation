@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     instagram_account_id: str = ""
     public_base_url: str = ""  # for Instagram video hosting
 
+    # --- JWT / Auth ---
+    jwt_secret: SecretStr = SecretStr("change-me-in-production-use-openssl-rand")
+    jwt_access_token_expire_minutes: int = 15
+    jwt_refresh_token_expire_days: int = 7
+
     # --- Cost Budget ---
     monthly_budget: float = 100.0  # USD, for cost alerts
 
