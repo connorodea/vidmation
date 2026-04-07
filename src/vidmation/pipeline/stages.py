@@ -333,10 +333,30 @@ def stage_video_assembly(ctx: PipelineContext, settings: Settings) -> None:
         work_dir=work_dir,
     )
 
+    # Merge script sections with media clip paths from ctx.media_clips.
+    # The assembler expects each section to have a "media_path" key.
     sections = ctx.script.get("sections", []) if ctx.script else []
+    clip_by_index = {c["section_index"]: c for c in (ctx.media_clips or [])}
+
+    enriched_sections: list[dict] = []
+    for sec in sections:
+        idx = sec["section_number"]
+        clip_info = clip_by_index.get(idx)
+        if clip_info is None:
+            logger.warning("[assembly] No media clip for section %d — skipping", idx)
+            continue
+        enriched = dict(sec)
+        enriched["media_path"] = clip_info["path"]
+        enriched_sections.append(enriched)
+
+    if not enriched_sections:
+        raise RuntimeError(
+            "No sections have media clips — cannot assemble video. "
+            f"Script has {len(sections)} sections, media_clips has {len(ctx.media_clips)} entries."
+        )
 
     ctx.final_video_path = assembler.assemble(
-        sections=sections,
+        sections=enriched_sections,
         voiceover_path=ctx.voiceover_path,
         word_timestamps=ctx.word_timestamps or [],
         music_path=ctx.music_path,

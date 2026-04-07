@@ -253,8 +253,7 @@ class VideoAssembler:
             # Much shorter -- slow down (within reason: min 0.5x speed)
             speed_factor = max(0.5, clip_duration / target_duration)
             pts_factor = 1.0 / speed_factor
-            stream = stream.filter("setpts", f"{pts_factor}*PTS")
-            stream = stream.filter("atrim", duration=target_duration)
+            stream = stream.video.filter("setpts", f"{pts_factor}*PTS")
         # Otherwise close enough -- minor trim handles the rest
 
         # Scale + pad to target resolution (letterbox/pillarbox)

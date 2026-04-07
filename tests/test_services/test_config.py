@@ -20,8 +20,13 @@ from vidmation.config.settings import Settings
 
 
 class TestSettings:
-    def test_settings_loads_defaults(self):
-        settings = Settings()
+    def test_settings_loads_defaults(self, monkeypatch):
+        # Prevent .env file from overriding code defaults
+        monkeypatch.delenv("VIDMATION_DEFAULT_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("VIDMATION_DEFAULT_TTS_PROVIDER", raising=False)
+        monkeypatch.delenv("VIDMATION_DEFAULT_IMAGE_PROVIDER", raising=False)
+        monkeypatch.delenv("VIDMATION_DEFAULT_VIDEO_FORMAT", raising=False)
+        settings = Settings(_env_file=None)
         assert settings.database_url == "sqlite:///data/vidmation.db"
         assert settings.web_port == 8000
         assert settings.default_llm_provider == "claude"
@@ -30,13 +35,13 @@ class TestSettings:
         assert settings.use_redis is False
 
     def test_settings_default_paths(self):
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.data_dir == Path("data")
         assert settings.output_dir == Path("output")
         assert settings.profiles_dir == Path("channel_profiles")
 
     def test_settings_default_budget(self):
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.monthly_budget == 100.0
 
 

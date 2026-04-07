@@ -74,6 +74,10 @@ class WhisperCaptionGenerator(BaseService):
         """Run transcription using faster-whisper (CTranslate2). Python 3.14 compatible."""
         self.logger.info("Whisper (faster-whisper): transcribing %s", audio_path.name)
 
+        # Prevent OpenMP duplicate library crash on macOS (ctranslate2 + torch conflict)
+        import os
+        os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
         try:
             from faster_whisper import WhisperModel
         except ImportError as exc:

@@ -90,7 +90,7 @@ class MediaProvider(BaseService):
         """
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        if media_type == "image":
+        if media_type in ("image", "stock_image", "ai_image"):
             results = self.search_images(query=query, count=count)
             ext = ".jpg"
         else:

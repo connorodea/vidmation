@@ -262,15 +262,15 @@ def generate_voiceover(
 
     with console.status("[cyan]Synthesising voiceover...[/cyan]"):
         tts = create_tts_provider(settings=settings)
-        result = tts.synthesize(
+        audio_path, duration = tts.synthesize(
             text=full_narration,
             output_path=output_path,
             voice_config=profile.voice,
         )
 
     console.print(
-        f"[green]Voiceover saved to {result['path']}[/green] "
-        f"({result.get('duration', 0):.1f}s)"
+        f"[green]Voiceover saved to {audio_path}[/green] "
+        f"({duration:.1f}s)"
     )
 
 
@@ -315,16 +315,16 @@ def generate_thumbnail(
 
     with console.status("[cyan]Generating thumbnail...[/cyan]"):
         generator = create_image_generator(settings=settings)
-        result = generator.generate(
+        saved_path = generator.generate(
             prompt=f"YouTube thumbnail for: {title}. Style: {profile.thumbnail.style}",
             output_path=output_path,
         )
 
     # Update video record
-    video_repo.update_status(video_id, video.status, thumbnail_path=str(result["path"]))
+    video_repo.update_status(video_id, video.status, thumbnail_path=str(saved_path))
     session.close()
 
-    console.print(f"[green]Thumbnail saved to {result['path']}[/green]")
+    console.print(f"[green]Thumbnail saved to {saved_path}[/green]")
 
 
 # ---------------------------------------------------------------------------

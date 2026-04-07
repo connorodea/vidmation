@@ -318,6 +318,130 @@ def generate_ass_file(
     return output_path
 
 
+def _has_ass_filter() -> bool:
+    """Check whether ffmpeg was compiled with the ``ass`` video filter (libass)."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-filters"],
+            capture_output=True, text=True, timeout=5,
+        )
+        # Look for " ass " as a filter name in the output
+        for line in result.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[1] == "ass":
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def _burn_captions_ass_filter(
+    video_path: Path, ass_path: Path, output_path: Path
+) -> None:
+    """Burn ASS subtitles using ffmpeg's ``ass`` video filter (requires libass)."""
+    abs_ass = str(ass_path.resolve())
+    escaped_ass = (
+        abs_ass
+        .replace("\\", "\\\\\\\\")
+        .replace(":", "\\:")
+        .replace("'", "\\'")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+    )
+    try:
+        (
+            ffmpeg
+            .input(str(video_path))
+            .filter("ass", filename=escaped_ass)
+            .output(
+                str(output_path),
+                vcodec="libx264",
+                acodec="copy",
+                crf="18",
+                preset="medium",
+                pix_fmt="yuv420p",
+            )
+            .overwrite_output()
+            .run(quiet=True)
+        )
+    except ffmpeg.Error as exc:
+        stderr = exc.stderr.decode(errors="replace") if exc.stderr else "unknown error"
+        raise FFmpegError(f"Caption burn-in failed: {stderr}") from exc
+
+
+def _copy_without_captions(
+    video_path: Path, ass_path: Path, output_path: Path
+) -> None:
+    """Copy the video as-is and generate a standalone SRT file alongside it.
+
+    This is the fallback when the ``ass`` video filter is not available.
+    The SRT file can be uploaded to YouTube separately or used with a player
+    that supports external subtitles.
+    """
+    import shutil
+
+    # Copy video without modification
+    shutil.copy2(str(video_path), str(output_path))
+
+    # Generate a companion SRT file from the ASS timestamps
+    srt_path = output_path.with_suffix(".srt")
+    _ass_to_srt(ass_path, srt_path)
+    logger.info(
+        "Video copied without burned captions. SRT file generated at %s",
+        srt_path,
+    )
+
+
+def _ass_to_srt(ass_path: Path, srt_path: Path) -> None:
+    """Convert an ASS subtitle file to SRT format for YouTube upload."""
+    import re
+
+    lines = ass_path.read_text(encoding="utf-8").splitlines()
+    dialogues: list[tuple[str, str, str]] = []
+
+    for line in lines:
+        if not line.startswith("Dialogue:"):
+            continue
+        # Dialogue: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+        parts = line.split(",", 9)
+        if len(parts) < 10:
+            continue
+        start_ass = parts[1].strip()
+        end_ass = parts[2].strip()
+        text = parts[9].strip()
+        # Strip ASS override tags like {\kf100} or {\fscx0...}
+        text = re.sub(r"\{[^}]*\}", "", text)
+        text = text.replace("\\N", "\n").replace("\\n", "\n")
+        if text.strip():
+            dialogues.append((start_ass, end_ass, text))
+
+    srt_lines: list[str] = []
+    for idx, (start, end, text) in enumerate(dialogues, 1):
+        srt_lines.append(str(idx))
+        srt_lines.append(f"{_ass_time_to_srt(start)} --> {_ass_time_to_srt(end)}")
+        srt_lines.append(text)
+        srt_lines.append("")
+
+    srt_path.write_text("\n".join(srt_lines), encoding="utf-8")
+
+
+def _ass_time_to_srt(ass_time: str) -> str:
+    """Convert ASS timestamp ``H:MM:SS.cc`` to SRT ``HH:MM:SS,mmm``."""
+    # ASS: 0:01:23.45  ->  SRT: 00:01:23,450
+    parts = ass_time.split(":")
+    if len(parts) == 3:
+        h, m, s_cs = parts
+        if "." in s_cs:
+            s, cs = s_cs.split(".")
+            ms = int(cs) * 10  # centiseconds to milliseconds
+        else:
+            s = s_cs
+            ms = 0
+        return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{ms:03d}"
+    return ass_time  # fallback
+
+
 def burn_captions(
     video_path: Path,
     ass_path: Path,
@@ -350,28 +474,16 @@ def burn_captions(
 
     logger.info("Burning captions from %s into %s", ass_path.name, video_path.name)
 
-    # The ass filter requires escaping colons and backslashes in the path.
-    escaped_ass = str(ass_path).replace("\\", "\\\\").replace(":", "\\:")
-
-    try:
-        (
-            ffmpeg
-            .input(str(video_path))
-            .filter("ass", escaped_ass)
-            .output(
-                str(output_path),
-                vcodec="libx264",
-                acodec="copy",
-                crf="18",
-                preset="medium",
-                pix_fmt="yuv420p",
-            )
-            .overwrite_output()
-            .run(quiet=True)
+    # Try ASS filter first (requires libass), fall back to soft subtitle embedding.
+    if _has_ass_filter():
+        _burn_captions_ass_filter(video_path, ass_path, output_path)
+    else:
+        logger.warning(
+            "[captions] ffmpeg was not compiled with libass — "
+            "embedding subtitles as a soft stream instead of burning in. "
+            "Install ffmpeg with libass for hard-burned captions."
         )
-    except ffmpeg.Error as exc:
-        stderr = exc.stderr.decode(errors="replace") if exc.stderr else "unknown error"
-        raise FFmpegError(f"Caption burn-in failed: {stderr}") from exc
+        _copy_without_captions(video_path, ass_path, output_path)
 
     logger.info("Captioned video written: %s", output_path)
     return output_path
