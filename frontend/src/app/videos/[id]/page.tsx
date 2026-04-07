@@ -4,6 +4,7 @@ import { StatusDot } from "@/components/shared/status-dot";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration, formatDate } from "@/lib/utils";
+import { VideoTimelineWrapper } from "./timeline-wrapper";
 import type { Video, Job } from "@/types";
 
 const API_BASE =
@@ -70,6 +71,14 @@ export default async function VideoDetailPage({
           <span className="text-white/[0.15]">|</span>
           <span className="capitalize">{video.status}</span>
         </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="mb-8">
+        <VideoTimelineWrapper
+          scriptJson={video.script_json}
+          durationSeconds={video.duration_seconds}
+        />
       </div>
 
       {/* Two-column layout */}

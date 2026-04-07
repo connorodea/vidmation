@@ -260,6 +260,7 @@ class VideoAssembler:
         self._mux_video_audio(timeline_path, mixed_audio_path, muxed_path)
 
         # 6. Burn captions
+        captioned_path = self.work_dir / "captioned.mp4"
         if word_timestamps:
             logger.info("Generating captions (%d words)", len(word_timestamps))
             ass_path = self.work_dir / "captions.ass"
@@ -270,11 +271,17 @@ class VideoAssembler:
                 animation=self._resolve_caption_animation(),
             )
             logger.info("Burning captions into video")
-            burn_captions(muxed_path, ass_path, output_path)
+            burn_captions(muxed_path, ass_path, captioned_path)
         else:
             # No captions -- just copy muxed result
             logger.info("No word timestamps; skipping captions")
-            self._copy_file(muxed_path, output_path)
+            self._copy_file(muxed_path, captioned_path)
+
+        # 7. Apply AIVIDIO watermark (if logo exists)
+        watermarked_path = self._apply_watermark(captioned_path, output_path)
+        if watermarked_path != output_path:
+            # Watermark was skipped or failed -- copy captioned to output
+            self._copy_file(captioned_path, output_path)
 
         logger.info("=== Assembly complete: %s ===", output_path)
         return output_path
@@ -301,8 +308,7 @@ class VideoAssembler:
         w, h = self.format_spec.width, self.format_spec.height
         fps = self.format_spec.fps
 
-        stream = ffmpeg.input(str(clip_path))
-
+        # Decide strategy based on clip vs target ratio
         if clip_duration > target_duration * 1.5:
             # Much longer -- trim from a random start point
             max_start = max(0.0, clip_duration - target_duration)
@@ -311,12 +317,23 @@ class VideoAssembler:
         elif clip_duration > target_duration:
             # Slightly longer -- just trim
             stream = ffmpeg.input(str(clip_path), t=target_duration)
-        elif clip_duration < target_duration * 0.5:
-            # Much shorter -- slow down (within reason: min 0.5x speed)
-            speed_factor = max(0.5, clip_duration / target_duration)
+        elif clip_duration < target_duration * 0.7:
+            # Much shorter -- loop the clip to fill the target duration
+            # instead of extreme slow-motion which looks awkward
+            stream = ffmpeg.input(str(clip_path), stream_loop=-1)
+            logger.debug(
+                "Looping clip %s (%.2fs) to fill %.2fs",
+                clip_path.name, clip_duration, target_duration,
+            )
+        elif clip_duration < target_duration:
+            # Between 0.7x and 1.0x -- slight slow-down is acceptable
+            speed_factor = clip_duration / target_duration
             pts_factor = 1.0 / speed_factor
+            stream = ffmpeg.input(str(clip_path))
             stream = stream.video.filter("setpts", f"{pts_factor}*PTS")
-        # Otherwise close enough -- minor trim handles the rest
+        else:
+            # Close enough -- minor trim handles the rest
+            stream = ffmpeg.input(str(clip_path))
 
         # Scale + pad to target resolution (letterbox/pillarbox)
         stream = stream.filter(
@@ -840,3 +857,64 @@ class VideoAssembler:
         except ffmpeg.Error as exc:
             stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
             raise FFmpegError(f"File copy failed ({src} -> {dst}): {stderr}") from exc
+
+    # ------------------------------------------------------------------
+    # Internal: watermark overlay
+    # ------------------------------------------------------------------
+
+    def _apply_watermark(self, video_path: Path, output_path: Path) -> Path:
+        """Overlay the AIVIDIO logo as a semi-transparent watermark.
+
+        The logo is placed in the bottom-right corner with 20px padding,
+        scaled to 80px height, and rendered at 30% opacity.
+
+        If the logo file does not exist, the video is returned unchanged.
+
+        Returns:
+            Path to the watermarked video (or the original if no logo).
+        """
+        # Resolve logo path relative to the project assets directory
+        logo_path = Path(__file__).resolve().parents[3] / "assets" / "aividio-logo.png"
+        if not logo_path.exists():
+            logger.warning("AIVIDIO logo not found at %s; skipping watermark", logo_path)
+            return video_path
+
+        logger.info("Applying AIVIDIO watermark from %s", logo_path)
+
+        video_stream = ffmpeg.input(str(video_path))
+        logo_stream = (
+            ffmpeg
+            .input(str(logo_path))
+            .filter("scale", -1, 80)  # scale to 80px height, preserve aspect ratio
+            .filter("colorchannelmixer", aa=0.3)  # 30% opacity
+        )
+
+        overlay = ffmpeg.overlay(
+            video_stream,
+            logo_stream,
+            x="W-w-20",  # 20px from right edge
+            y="H-h-20",  # 20px from bottom edge
+        )
+
+        try:
+            (
+                overlay
+                .output(
+                    str(output_path),
+                    vcodec="libx264",
+                    crf="18",
+                    preset="fast",
+                    pix_fmt="yuv420p",
+                    acodec="copy",
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+        except ffmpeg.Error as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
+            logger.warning("Watermark overlay failed, using video without watermark: %s",
+                          stderr[-300:] if stderr else "unknown")
+            return video_path
+
+        logger.info("Watermark applied: %s", output_path)
+        return output_path

@@ -119,6 +119,37 @@ def stage_captions(ctx: PipelineContext, settings: Settings) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 3b. Background music selection
+# ---------------------------------------------------------------------------
+
+def stage_music_selection(ctx: PipelineContext, settings: Settings) -> None:
+    """Select or download background music for the video.
+
+    Uses the channel profile's ``music.genre`` to pick an appropriate track.
+    Checks ``assets/music/`` for local files first, then downloads a
+    royalty-free track from the bundled catalog if needed.
+
+    Sets ``ctx.music_path`` so the video assembly stage can mix it with
+    the voiceover.
+    """
+    from vidmation.services.music.selector import MusicSelector
+
+    logger.info("[music] Selecting background music (genre=%s)", ctx.channel_profile.music.genre)
+
+    selector = MusicSelector(assets_dir=settings.assets_dir)
+    music_path = selector.select_music(
+        profile=ctx.channel_profile,
+        work_dir=ctx.work_dir,
+    )
+
+    if music_path is not None:
+        ctx.music_path = Path(music_path)
+        logger.info("[music] Background music selected: %s", ctx.music_path)
+    else:
+        logger.warning("[music] No background music available — video will have voiceover only")
+
+
+# ---------------------------------------------------------------------------
 # 4a. AI video generation (uses ModelOrchestrator for multi-model routing)
 # ---------------------------------------------------------------------------
 
@@ -614,6 +645,7 @@ STAGE_REGISTRY: list[tuple[str, callable]] = [
     ("script_generation", stage_script_generation),
     ("tts", stage_tts),
     ("captions", stage_captions),
+    ("music_selection", stage_music_selection),
     ("ai_video_generation", stage_ai_video_generation),
     ("media_sourcing", stage_media_sourcing),
     ("video_assembly", stage_video_assembly),
@@ -621,6 +653,9 @@ STAGE_REGISTRY: list[tuple[str, callable]] = [
     ("upload", stage_upload),
 ]
 """Ordered list of ``(stage_name, stage_function)`` tuples.
+
+``music_selection`` runs after ``captions`` but before video generation/sourcing
+so that background music is ready when the assembler composes the final video.
 
 ``ai_video_generation`` runs before ``media_sourcing`` so that AI-generated
 clips are available when the stock sourcing stage decides which sections
