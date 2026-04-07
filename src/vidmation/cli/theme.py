@@ -70,15 +70,15 @@ err = Console(stderr=True, theme=_THEME)
 # ASCII logo
 # ---------------------------------------------------------------------------
 
-LOGO = r"""[bold bright_green]
-     _    ___  __     ___     _ _
-    / \  |_ _| \ \   / (_) __| (_) ___
-   / _ \  | |   \ \ / /| |/ _` | |/ _ \
-  / ___ \ | |    \ V / | | (_| | | (_) |
- /_/   \_\___|    \_/  |_|\__,_|_|\___/[/bold bright_green]
+LOGO = r"""[bold white]
+    ___     ____  _    __  ____  ____    ____  ___
+   /   |   /  _/ | |  / / /  _/ / __ \  /  _/ / _ \
+  / /| |   / /   | | / /  / /  / / / /  / /  / / / /
+ / ___ | _/ /    | |/ / _/ /  / /_/ / _/ /  / /_/ /
+/_/  |_|/___/    |___/ /___/ /_____/ /___/  \____/[/bold white]
 """
 
-LOGO_COMPACT = "[bold bright_green]AIVidio[/bold bright_green]"
+LOGO_COMPACT = "[bold white]AIVIDIO[/bold white]"
 
 TAGLINE = "[dim]AI-powered faceless video automation[/dim]"
 

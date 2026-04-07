@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
     )
 
     app = FastAPI(
-        title="AIVidio",
+        title="AIVIDIO",
         description="AI-powered faceless YouTube video automation — aividio.com",
         version="0.1.0",
     )

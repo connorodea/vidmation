@@ -25,11 +25,11 @@ const TIERS: PricingTier[] = [
     monthlyPrice: 0,
     annualPrice: 0,
     period: "forever",
-    description: "Try AIVidio risk-free",
+    description: "Try AIVIDIO risk-free",
     features: [
       "3 videos per month",
       "720p export quality",
-      "AIVidio watermark",
+      "AIVIDIO watermark",
       "2 visual styles",
       "5 voice options",
       "Community support",

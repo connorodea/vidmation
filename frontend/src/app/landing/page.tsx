@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
@@ -37,6 +38,18 @@ function HeroSection() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[800px] text-center">
+        {/* Hero Logo */}
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="/aividio-logo.png"
+            alt="AIVIDIO"
+            width={280}
+            height={74}
+            className="invert brightness-200"
+            priority
+          />
+        </div>
+
         {/* Badge */}
         <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 backdrop-blur-sm">
           <div className="h-1.5 w-1.5 rounded-full bg-[#10a37f] animate-pulse-dot" />
@@ -218,7 +231,7 @@ const FAQ_ITEMS = [
   {
     question: "How does the AI generate videos?",
     answer:
-      "AIVidio uses a multi-step pipeline: GPT-4o writes a researched script, our visual engine matches each section with imagery (stock footage, oil paintings, or AI-generated scenes), a neural voice narrates the script, and our editor assembles everything with transitions, captions, and background music.",
+      "AIVIDIO uses a multi-step pipeline: GPT-4o writes a researched script, our visual engine matches each section with imagery (stock footage, oil paintings, or AI-generated scenes), a neural voice narrates the script, and our editor assembles everything with transitions, captions, and background music.",
   },
   {
     question: "Can I edit the script before generating?",
@@ -246,9 +259,9 @@ const FAQ_ITEMS = [
       "10 styles: Oil Painting, Cinematic Realism, Anime, Watercolor, Dark Noir, Retro Vintage, Corporate Clean, Sci-Fi, Nature, and Stock Footage. Each is optimized for specific content types.",
   },
   {
-    question: "Can I use AIVidio for YouTube monetization?",
+    question: "Can I use AIVIDIO for YouTube monetization?",
     answer:
-      "Yes. Videos created with AIVidio are eligible for YouTube monetization. The content is unique, original, and meets YouTube's guidelines for AI-assisted content when properly disclosed.",
+      "Yes. Videos created with AIVIDIO are eligible for YouTube monetization. The content is unique, original, and meets YouTube's guidelines for AI-assisted content when properly disclosed.",
   },
   {
     question: "Can I cancel anytime?",
@@ -396,15 +409,14 @@ function Footer() {
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/landing" className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f]">
-                <span className="text-[11px] font-bold tracking-tight text-white">
-                  Ai
-                </span>
-              </div>
-              <span className="text-[15px] font-semibold tracking-tight text-[#fafafa]">
-                AIVidio
-              </span>
+            <Link href="/landing" className="flex items-center">
+              <Image
+                src="/aividio-logo.png"
+                alt="AIVIDIO"
+                width={120}
+                height={32}
+                className="invert brightness-200"
+              />
             </Link>
             <p className="mt-4 max-w-[280px] text-sm leading-relaxed text-[#666]">
               AI-powered video creation for YouTube. From script to screen in
@@ -485,7 +497,7 @@ function Footer() {
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-8 sm:flex-row">
           <p className="text-xs text-[#444]">
-            &copy; 2025 AIVidio. All rights reserved.
+            &copy; 2025 AIVIDIO. All rights reserved.
           </p>
           <p className="text-xs text-[#333]">
             Built with AI, for AI creators.

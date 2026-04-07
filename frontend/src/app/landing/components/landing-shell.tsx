@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 
@@ -47,15 +48,15 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/landing" className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f]">
-                <span className="text-[11px] font-bold tracking-tight text-white">
-                  Ai
-                </span>
-              </div>
-              <span className="text-[15px] font-semibold tracking-tight text-[#fafafa]">
-                AIVidio
-              </span>
+            <Link href="/landing" className="flex items-center">
+              <Image
+                src="/aividio-logo.png"
+                alt="AIVIDIO"
+                width={120}
+                height={32}
+                className="invert brightness-200"
+                priority
+              />
             </Link>
 
             {/* Desktop Navigation — center */}
