@@ -5,7 +5,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AppShell } from "@/components/layout/app-shell";
 
-const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password", "/landing"];
 
 interface LayoutRouterProps {
   children: React.ReactNode;
@@ -13,14 +13,14 @@ interface LayoutRouterProps {
 
 export function LayoutRouter({ children }: LayoutRouterProps) {
   const pathname = usePathname();
-  const isAuthRoute = AUTH_ROUTES.some(
+  const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
   return (
     <AuthProvider>
-      {isAuthRoute ? (
-        // Auth pages render standalone — no sidebar, no guard
+      {isPublicRoute ? (
+        // Public pages render standalone — no sidebar, no guard
         children
       ) : (
         // All other pages get the sidebar shell + auth protection
