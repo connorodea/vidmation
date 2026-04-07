@@ -31,7 +31,7 @@ class PipelineContext:
     voiceover_path: Path | None = None
     voiceover_duration: float | None = None
     word_timestamps: list[dict] | None = None
-    media_clips: list[dict] | None = None  # [{path, section_index, type}]
+    media_clips: list[dict] | None = None  # [{path, paths, section_index, type, clip_count}]
     music_path: Path | None = None
     final_video_path: Path | None = None
     thumbnail_path: Path | None = None
@@ -56,6 +56,12 @@ class PipelineContext:
             for clip in data["media_clips"]:
                 if "path" in clip and isinstance(clip["path"], Path):
                     clip["path"] = str(clip["path"])
+                # Also convert paths in the multi-clip "paths" list
+                if "paths" in clip and isinstance(clip["paths"], list):
+                    clip["paths"] = [
+                        str(p) if isinstance(p, Path) else p
+                        for p in clip["paths"]
+                    ]
         # VideoFormat enum -> value
         if isinstance(data.get("format"), VideoFormat):
             data["format"] = data["format"].value

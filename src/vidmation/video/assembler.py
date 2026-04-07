@@ -125,6 +125,10 @@ class VideoAssembler:
             sections: Ordered list of section dicts.  Each must contain
                 ``"media_path"`` (str or Path) pointing to the visual asset
                 and ``"text"`` or ``"narration"`` for timing proportions.
+                Optionally, ``"media_paths"`` (list of str/Path) provides
+                multiple clips for the section.  When present, the section
+                duration is split into 3-5 second sub-clips that interleave
+                the available media assets for a fast-cut visual style.
             voiceover_path: Path to the voiceover audio file.
             word_timestamps: List of ``{"word": str, "start": float, "end": float}``
                 dicts for caption generation.
@@ -166,6 +170,35 @@ class VideoAssembler:
 
         for idx, sec in enumerate(timed_sections):
             sec_dur = sec["end"] - sec["start"]
+
+            # --- Multi-clip path: interleave multiple media assets ----------
+            media_paths_raw = sec.get("media_paths")
+            if media_paths_raw and len(media_paths_raw) > 1:
+                logger.info(
+                    "Section %d/%d: %.2fs, multi-clip (%d assets)",
+                    idx + 1,
+                    len(timed_sections),
+                    sec_dur,
+                    len(media_paths_raw),
+                )
+
+                section_clip = self._render_multi_clip_section(
+                    media_paths=[Path(p) for p in media_paths_raw],
+                    section_duration=sec_dur,
+                    section_idx=idx,
+                )
+                clip_paths.append(section_clip)
+
+                actual_dur = get_duration(section_clip)
+                durations.append(actual_dur)
+                if abs(actual_dur - sec_dur) > 0.5:
+                    logger.warning(
+                        "Section %d: rendered %.2fs vs target %.2fs (delta %.2fs)",
+                        idx + 1, actual_dur, sec_dur, actual_dur - sec_dur,
+                    )
+                continue
+
+            # --- Single-clip path (original behaviour) ----------------------
             media_path = Path(sec["media_path"])
             if not media_path.exists():
                 raise FileNotFoundError(
@@ -390,6 +423,123 @@ class VideoAssembler:
         return out_path
 
     # ------------------------------------------------------------------
+    # Internal: multi-clip section assembly
+    # ------------------------------------------------------------------
+
+    def _render_multi_clip_section(
+        self,
+        media_paths: list[Path],
+        section_duration: float,
+        section_idx: int,
+    ) -> Path:
+        """Render multiple media assets into one section clip by interleaving.
+
+        Splits *section_duration* into sub-clips of 3-5 seconds each and
+        assigns each sub-clip to a different media asset.  The assets cycle
+        if there are more sub-clips than assets.
+
+        For video assets: trim/fit to the sub-clip duration.
+        For image assets: apply Ken Burns effect for the sub-clip duration.
+
+        The rendered sub-clips are concatenated into a single section clip.
+
+        Args:
+            media_paths: Paths to the media assets (videos and/or images).
+            section_duration: Total duration this section should fill (seconds).
+            section_idx: Section index, used for naming intermediate files.
+
+        Returns:
+            Path to the concatenated section video.
+        """
+        out_path = self.work_dir / f"section_{section_idx:03d}_multi.mp4"
+
+        # Filter to only existing files
+        valid_paths = [p for p in media_paths if p.exists()]
+        if not valid_paths:
+            raise FileNotFoundError(
+                f"No valid media files found for multi-clip section {section_idx}. "
+                f"Checked: {[str(p) for p in media_paths]}"
+            )
+
+        if len(valid_paths) < len(media_paths):
+            logger.warning(
+                "Section %d: %d/%d media files missing, using %d available",
+                section_idx,
+                len(media_paths) - len(valid_paths),
+                len(media_paths),
+                len(valid_paths),
+            )
+
+        # If only 1 valid file, fall back to single-clip render
+        if len(valid_paths) == 1:
+            p = valid_paths[0]
+            if _media_is_image(p):
+                return self._render_ken_burns(p, section_duration, section_idx)
+            return self._render_fitted_clip(p, section_duration, section_idx)
+
+        # Compute sub-clip durations: aim for 3-5 seconds each
+        target_sub = (_MIN_SUBCLIP_DURATION + _MAX_SUBCLIP_DURATION) / 2.0  # 4s
+        num_subclips = max(2, round(section_duration / target_sub))
+
+        # Don't create more sub-clips than we have assets * 2 (avoid too much
+        # repetition) and cap at a reasonable maximum
+        num_subclips = min(num_subclips, len(valid_paths) * 2, 10)
+
+        # Distribute duration evenly with slight random variation
+        base_dur = section_duration / num_subclips
+        sub_durations: list[float] = []
+        remaining = section_duration
+
+        for i in range(num_subclips):
+            if i == num_subclips - 1:
+                # Last sub-clip gets whatever remains
+                dur = remaining
+            else:
+                # Add slight variation (+/- 15%) but clamp to bounds
+                jitter = random.uniform(-0.15, 0.15)
+                dur = base_dur * (1.0 + jitter)
+                dur = max(_MIN_SUBCLIP_DURATION, min(_MAX_SUBCLIP_DURATION, dur))
+                dur = min(dur, remaining - _MIN_SUBCLIP_DURATION * (num_subclips - i - 1))
+            sub_durations.append(dur)
+            remaining -= dur
+
+        logger.info(
+            "Section %d: splitting %.2fs into %d sub-clips: %s",
+            section_idx,
+            section_duration,
+            num_subclips,
+            [f"{d:.1f}s" for d in sub_durations],
+        )
+
+        # Render each sub-clip, cycling through assets
+        sub_clip_paths: list[Path] = []
+        for i, sub_dur in enumerate(sub_durations):
+            asset_path = valid_paths[i % len(valid_paths)]
+            sub_idx_label = section_idx * 100 + i  # unique index for temp files
+
+            if _media_is_image(asset_path):
+                rendered = self._render_ken_burns(asset_path, sub_dur, sub_idx_label)
+            else:
+                rendered = self._render_fitted_clip(asset_path, sub_dur, sub_idx_label)
+
+            sub_clip_paths.append(rendered)
+
+        # Concatenate sub-clips into the section clip
+        if len(sub_clip_paths) == 1:
+            self._copy_file(sub_clip_paths[0], out_path)
+        else:
+            self._concat_clips(sub_clip_paths, out_path)
+
+        logger.info(
+            "Multi-clip section %d: %d sub-clips -> %s (%.2fs)",
+            section_idx,
+            len(sub_clip_paths),
+            out_path.name,
+            section_duration,
+        )
+        return out_path
+
+    # ------------------------------------------------------------------
     # Internal: timeline assembly
     # ------------------------------------------------------------------
 
@@ -602,7 +752,7 @@ class VideoAssembler:
 
         out_path = self.work_dir / "timeline_titled.mp4"
 
-        # Build a chain of drawtext filters — one per section heading
+        # Build a chain of drawtext filters -- one per section heading
         # Account for xfade overlaps: accumulate actual start positions
         transition_dur = 0.5
         actual_starts: list[float] = [0.0]
