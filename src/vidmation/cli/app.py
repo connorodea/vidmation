@@ -19,33 +19,51 @@ from vidmation.cli.youtube import youtube_app
 app = typer.Typer(
     name="vidmation",
     help="AI-powered faceless YouTube video automation platform.",
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
     rich_markup_mode="rich",
 )
 
-# Register sub-command groups
-app.add_typer(agent_app, name="agent", help="AI agent: Claude orchestrates end-to-end video creation.")
-app.add_typer(generate_app, name="generate", help="Generate videos, scripts, voiceovers, and thumbnails.")
-app.add_typer(channel_app, name="channel", help="Manage YouTube channels.")
-app.add_typer(job_app, name="job", help="View and manage pipeline jobs.")
-app.add_typer(server_app, name="serve", help="Start the web server.")
-app.add_typer(batch_app, name="batch", help="Batch video generation from topics, CSV, or RSS.")
-app.add_typer(audio_app, name="audio", help="Audio-first video generation from audio files.")
-app.add_typer(content_app, name="content", help="Content planning, calendars, trending topics, and series.")
-app.add_typer(effects_app, name="effects", help="Post-production effects: zoom, silence removal, B-roll, emoji/SFX, clips.")
-app.add_typer(youtube_app, name="youtube", help="YouTube: setup, upload, schedule, list, update videos.")
-app.add_typer(flywheel_app, name="flywheel", help="Content flywheel: repurpose videos for IG, TikTok, Facebook, X.")
+# Register sub-command groups — icons help scanability
+app.add_typer(generate_app, name="generate", help="[bold bright_green]\u25b6[/] Generate videos, scripts, voiceovers, thumbnails, blog\u2192video.")
+app.add_typer(youtube_app, name="youtube", help="[bold red]\u25b6[/] YouTube: setup OAuth, upload, schedule, list, update.")
+app.add_typer(flywheel_app, name="flywheel", help="[bold bright_cyan]\u25b6[/] Content flywheel: repurpose for IG, TikTok, FB, X.")
+app.add_typer(channel_app, name="channel", help="[bold yellow]\u25b6[/] Manage channel profiles and YouTube connections.")
+app.add_typer(job_app, name="job", help="[bold blue]\u25b6[/] View and manage pipeline jobs.")
+app.add_typer(batch_app, name="batch", help="[bold magenta]\u25b6[/] Batch video generation from topics, CSV, or RSS.")
+app.add_typer(content_app, name="content", help="[bold bright_green]\u25b6[/] Content planning, calendars, trending topics, series.")
+app.add_typer(effects_app, name="effects", help="[bold bright_cyan]\u25b6[/] Post-production: zoom, silence removal, B-roll, clips.")
+app.add_typer(audio_app, name="audio", help="[bold yellow]\u25b6[/] Audio-first video generation from audio files.")
+app.add_typer(agent_app, name="agent", help="[bold magenta]\u25b6[/] AI agent: Claude orchestrates end-to-end creation.")
+app.add_typer(server_app, name="serve", help="[bold blue]\u25b6[/] Start the web server and dashboard.")
 
-# Register top-level worker/serve commands
-from vidmation.cli.server import worker as _worker_cmd, serve as _serve_cmd  # noqa: E402
+# Register top-level worker command
+from vidmation.cli.server import worker as _worker_cmd  # noqa: E402
 
 app.command("worker", help="Start the background job worker.")(_worker_cmd)
 
 
-@app.callback()
-def _main_callback() -> None:
-    """VIDMATION — faceless YouTube video automation."""
-    pass
+@app.callback(invoke_without_command=True)
+def _main_callback(
+    ctx: typer.Context,
+    version: bool = typer.Option(False, "--version", "-V", help="Show version and exit."),
+) -> None:
+    """[bold bright_green]AIVidio[/] \u2014 AI-powered faceless video automation."""
+    if version:
+        from vidmation.cli.theme import console, LOGO, TAGLINE, VERSION, ACCENT
+
+        console.print(f"vidmation [bold bright_green]{VERSION}[/bold bright_green]")
+        raise typer.Exit()
+
+    if ctx.invoked_subcommand is None:
+        from vidmation.cli.theme import console, LOGO, TAGLINE, VERSION
+
+        console.print(LOGO)
+        console.print(f"  {TAGLINE}   [dim]v{VERSION}[/dim]")
+        console.print()
+        console.print("  Run [bold bright_green]vidmation --help[/bold bright_green] to see all commands.")
+        console.print("  Run [bold bright_green]vidmation generate video --topic \"...\"[/bold bright_green] to create a video.")
+        console.print()
 
 
 if __name__ == "__main__":

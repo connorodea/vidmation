@@ -5,14 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from rich.console import Console
-from rich.table import Table
 
+from vidmation.cli.theme import console, err, error, success, warning, styled_table, status_badge, result_panel, spinner, header
 from vidmation.db.engine import get_session, init_db
 from vidmation.db.repos import ChannelRepo
-
-console = Console()
-err_console = Console(stderr=True)
 
 channel_app = typer.Typer(no_args_is_help=True)
 
@@ -34,10 +30,10 @@ def channel_list(
     session.close()
 
     if not channels:
-        console.print("[yellow]No channels found.[/yellow]  Create one with: [bold]vidmation channel add[/bold]")
+        warning("No channels found.  Create one with: [bold]vidmation channel add[/bold]")
         return
 
-    table = Table(title="Channels", show_lines=True)
+    table = styled_table("Channels")
     table.add_column("Name", style="cyan", no_wrap=True)
     table.add_column("ID", style="dim", max_width=12)
     table.add_column("Profile Path", style="dim")
@@ -51,7 +47,7 @@ def channel_list(
             ch.id[:12] + "...",
             ch.profile_path,
             ch.youtube_channel_id or "-",
-            "[green]Yes[/green]" if ch.is_active else "[red]No[/red]",
+            status_badge("active") if ch.is_active else status_badge("inactive"),
             ch.created_at.strftime("%Y-%m-%d %H:%M") if ch.created_at else "-",
         )
 
@@ -78,8 +74,8 @@ def channel_add(
     # Validate profile exists
     profile_path = Path(profile)
     if not profile_path.exists():
-        err_console.print(
-            f"[red]Error:[/red] Profile file not found: {profile}\n"
+        error(
+            f"Profile file not found: {profile}\n"
             f"Create it or use the default: channel_profiles/default.yml"
         )
         raise typer.Exit(1)
@@ -90,17 +86,14 @@ def channel_add(
     # Check uniqueness
     existing = repo.get_by_name(name)
     if existing:
-        err_console.print(f"[red]Error:[/red] Channel '{name}' already exists (ID: {existing.id[:12]}...).")
+        error(f"Channel '{name}' already exists (ID: {existing.id[:12]}...).")
         session.close()
         raise typer.Exit(1)
 
     channel = repo.create(name=name, profile_path=str(profile))
     session.close()
 
-    console.print(
-        f"[green]Channel created:[/green] {channel.name}  "
-        f"(ID: [cyan]{channel.id}[/cyan])"
-    )
+    success(f"Channel created: {channel.name}  (ID: [cyan]{channel.id}[/cyan])")
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +116,7 @@ def channel_auth(
     channel = repo.get_by_name(name)
 
     if channel is None:
-        err_console.print(f"[red]Error:[/red] Channel '{name}' not found.")
+        error(f"Channel '{name}' not found.")
         session.close()
         raise typer.Exit(1)
 
@@ -138,15 +131,15 @@ def channel_auth(
         channel.oauth_token_json = creds.to_json() if hasattr(creds, "to_json") else str(creds)
         session.commit()
 
-        console.print(f"[green]Authentication successful for channel '{name}'![/green]")
+        success(f"Authentication successful for channel '{name}'!")
     except ImportError:
-        err_console.print(
-            "[red]Error:[/red] YouTube auth dependencies not available.  "
+        error(
+            "YouTube auth dependencies not available.  "
             "Ensure google-auth-oauthlib is installed."
         )
         raise typer.Exit(1)
     except Exception as exc:
-        err_console.print(f"[red]Error during OAuth flow:[/red] {exc}")
+        error(f"Error during OAuth flow: {exc}")
         raise typer.Exit(1)
     finally:
         session.close()
@@ -168,7 +161,7 @@ def channel_deactivate(
     channel = repo.get_by_name(name)
 
     if channel is None:
-        err_console.print(f"[red]Error:[/red] Channel '{name}' not found.")
+        error(f"Channel '{name}' not found.")
         session.close()
         raise typer.Exit(1)
 
@@ -176,4 +169,4 @@ def channel_deactivate(
     session.commit()
     session.close()
 
-    console.print(f"Channel [cyan]{name}[/cyan] deactivated.")
+    success(f"Channel [cyan]{name}[/cyan] deactivated.")

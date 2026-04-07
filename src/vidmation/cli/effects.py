@@ -11,12 +11,8 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
-console = Console()
-err_console = Console(stderr=True)
+from vidmation.cli.theme import console, err, error, success, info, styled_table, result_panel, spinner
 
 effects_app = typer.Typer(no_args_is_help=True)
 
@@ -37,7 +33,7 @@ def _load_timestamps(timestamps_file: str | None, video_path: Path) -> list[dict
     if timestamps_file:
         ts_path = Path(timestamps_file)
         if not ts_path.exists():
-            err_console.print(f"[red]Error:[/red] Timestamps file not found: {ts_path}")
+            error(f"Timestamps file not found: {ts_path}")
             raise typer.Exit(1)
         data = json.loads(ts_path.read_text(encoding="utf-8"))
         # Support both a flat list and a {"words": [...]} wrapper.
@@ -50,7 +46,7 @@ def _load_timestamps(timestamps_file: str | None, video_path: Path) -> list[dict
     from vidmation.services.captions.whisper import WhisperCaptionGenerator
     from vidmation.utils.ffmpeg import run_ffmpeg
 
-    console.print("[dim]No timestamps file provided; auto-transcribing...[/dim]")
+    info("No timestamps file provided; auto-transcribing...")
 
     # Extract audio.
     import tempfile
@@ -71,19 +67,19 @@ def _load_timestamps(timestamps_file: str | None, video_path: Path) -> list[dict
         try:
             whisper = WhisperCaptionGenerator(settings=settings, backend="replicate")
         except ValueError:
-            err_console.print(
-                "[red]Error:[/red] No Whisper backend available.  "
+            error(
+                "No Whisper backend available.  "
                 "Provide a timestamps JSON file with --timestamps."
             )
             audio_path.unlink(missing_ok=True)
             raise typer.Exit(1)
 
-    with console.status("[cyan]Transcribing audio...[/cyan]"):
+    with spinner("Transcribing audio..."):
         word_timestamps = whisper.transcribe(audio_path)
 
     audio_path.unlink(missing_ok=True)
 
-    console.print(f"[green]Transcribed {len(word_timestamps)} words[/green]")
+    success(f"Transcribed {len(word_timestamps)} words")
     return word_timestamps
 
 
@@ -91,7 +87,7 @@ def _validate_input(video_path: str) -> Path:
     """Validate and return the input video path."""
     path = Path(video_path)
     if not path.exists():
-        err_console.print(f"[red]Error:[/red] Video file not found: {video_path}")
+        error(f"Video file not found: {video_path}")
         raise typer.Exit(1)
     return path
 
@@ -133,24 +129,26 @@ def effects_zoom(
 
     output_path = Path(output) if output else None
 
-    console.print(Panel.fit(
-        f"[bold]Input:[/bold] {video_path.name}\n"
-        f"[bold]Style:[/bold] {style}\n"
-        f"[bold]Max zooms:[/bold] {max_zooms}\n"
-        f"[bold]Words:[/bold] {len(word_timestamps)}",
-        title="Magic Zoom",
+    console.print(result_panel(
+        "Magic Zoom",
+        [
+            ("Input:", video_path.name),
+            ("Style:", style),
+            ("Max zooms:", str(max_zooms)),
+            ("Words:", str(len(word_timestamps))),
+        ],
     ))
 
     zoom = MagicZoom()
 
-    with console.status("[cyan]Detecting emphasis points...[/cyan]"):
+    with spinner("Detecting emphasis points..."):
         zoom_points = zoom.detect_emphasis_points(
             word_timestamps=word_timestamps,
             max_zooms=max_zooms,
         )
 
     if zoom_points:
-        table = Table(title=f"Detected {len(zoom_points)} Zoom Points")
+        table = styled_table(f"Detected {len(zoom_points)} Zoom Points")
         table.add_column("Time", width=10, justify="right")
         table.add_column("Style", width=10)
         table.add_column("Intensity", width=10, justify="right")
@@ -165,7 +163,7 @@ def effects_zoom(
             )
         console.print(table)
 
-    with console.status("[cyan]Applying zoom effects...[/cyan]"):
+    with spinner("Applying zoom effects..."):
         result = zoom.auto_zoom(
             video_path=video_path,
             word_timestamps=word_timestamps,
@@ -174,7 +172,7 @@ def effects_zoom(
             output_path=output_path,
         )
 
-    console.print(f"\n[green]Zoom effects applied![/green] Output: [cyan]{result}[/cyan]")
+    success(f"Zoom effects applied! Output: {result}")
 
 
 # ---------------------------------------------------------------------------

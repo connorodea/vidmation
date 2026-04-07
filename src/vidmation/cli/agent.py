@@ -7,15 +7,10 @@ import sys
 from pathlib import Path
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.table import Table
 
+from vidmation.cli.theme import console, err, error, success, header, result_panel, spinner, styled_table, pipeline_progress
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
-
-console = Console()
 
 agent_app = typer.Typer(
     help="AI-powered video creation agent.  Let Claude coordinate the entire pipeline.",

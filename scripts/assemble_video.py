@@ -10,7 +10,7 @@ TOPIC = "5 Signs You Are Experiencing a Spiritual Awakening"
 TARGET_MINUTES = 8
 WORK = Path("data/work/production")
 OUTPUT = Path("output/spiritual_awakening_production.mp4")
-PEXELS_KEY = "NG80u2LYLNnqpbCBDSWFTDGHtb3f61iwsgPqwIwQXRUDMAwo8dKSBIxH"
+PEXELS_KEY = os.environ.get("VIDMATION_PEXELS_API_KEY", "")
 FPS = 30
 MUSIC_VOL = 0.12
 WORK.mkdir(parents=True, exist_ok=True)

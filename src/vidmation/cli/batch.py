@@ -7,12 +7,8 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
-console = Console()
-err_console = Console(stderr=True)
+from vidmation.cli.theme import console, error, success, info, styled_table, spinner, warning
 
 batch_app = typer.Typer(no_args_is_help=True)
 
@@ -48,12 +44,12 @@ def batch_topics(
     init_db()
 
     if not topics:
-        err_console.print("[red]Error:[/red] At least one topic is required.")
+        error("At least one topic is required.")
         raise typer.Exit(1)
 
     generator = BatchVideoGenerator(settings=get_settings())
 
-    with console.status(f"[cyan]Queueing {len(topics)} videos...[/cyan]"):
+    with spinner(f"Queueing {len(topics)} videos..."):
         try:
             results = generator.from_topics(
                 topics=topics,
@@ -61,7 +57,7 @@ def batch_topics(
                 format=format,
             )
         except ValueError as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
 
     _display_batch_results(results, title="Batch Topics")
@@ -98,19 +94,19 @@ def batch_csv(
 
     csv_file = Path(csv_path)
     if not csv_file.exists():
-        err_console.print(f"[red]Error:[/red] CSV file not found: {csv_path}")
+        error(f"CSV file not found: {csv_path}")
         raise typer.Exit(1)
 
     generator = BatchVideoGenerator(settings=get_settings())
 
-    with console.status(f"[cyan]Processing CSV: {csv_file.name}...[/cyan]"):
+    with spinner(f"Processing CSV: {csv_file.name}..."):
         try:
             results = generator.from_csv(
                 csv_path=csv_file,
                 channel_name=channel,
             )
         except (ValueError, FileNotFoundError) as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
 
     _display_batch_results(results, title=f"Batch CSV ({csv_file.name})")
@@ -155,18 +151,18 @@ def batch_ideas(
 
     generator = BatchVideoGenerator(settings=get_settings())
 
-    with console.status(f"[cyan]Generating {count} topic ideas...[/cyan]"):
+    with spinner(f"Generating {count} topic ideas..."):
         try:
             ideas = generator.generate_topic_ideas(
                 channel_name=channel,
                 count=count,
             )
         except ValueError as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
 
     # Display ideas in a table.
-    table = Table(title=f"Generated Topic Ideas ({len(ideas)})")
+    table = styled_table(f"Generated Topic Ideas ({len(ideas)})")
     table.add_column("#", style="dim", width=4)
     table.add_column("Topic", style="bold")
     table.add_column("Angle", style="italic")
@@ -190,13 +186,13 @@ def batch_ideas(
     if output:
         output_path = Path(output)
         output_path.write_text(json.dumps(ideas, indent=2), encoding="utf-8")
-        console.print(f"\n[green]Ideas saved to {output_path}[/green]")
+        success(f"Ideas saved to {output_path}")
 
     # Enqueue if requested.
     if enqueue:
         topics = [idea.get("topic", "") for idea in ideas if idea.get("topic")]
         if topics:
-            console.print(f"\n[cyan]Queueing {len(topics)} videos...[/cyan]")
+            info(f"Queueing {len(topics)} videos...")
             try:
                 results = generator.from_topics(
                     topics=topics,
@@ -204,7 +200,7 @@ def batch_ideas(
                 )
                 _display_batch_results(results, title="Auto-Queued from Ideas")
             except ValueError as exc:
-                err_console.print(f"[red]Error queueing:[/red] {exc}")
+                error(f"Error queueing: {exc}")
                 raise typer.Exit(1)
 
 
@@ -242,7 +238,7 @@ def batch_rss(
 
     generator = BatchVideoGenerator(settings=get_settings())
 
-    with console.status(f"[cyan]Fetching RSS feed (max {max_items} items)...[/cyan]"):
+    with spinner(f"Fetching RSS feed (max {max_items} items)..."):
         try:
             results = generator.from_rss(
                 feed_url=feed_url,
@@ -250,7 +246,7 @@ def batch_rss(
                 max_items=max_items,
             )
         except (ValueError, ImportError) as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
 
     _display_batch_results(results, title="Batch RSS Import")
@@ -266,12 +262,10 @@ def _display_batch_results(
 ) -> None:
     """Display batch results in a Rich table."""
     if not results:
-        console.print(
-            Panel("[yellow]No videos were queued.[/yellow]", title=title)
-        )
+        warning("No videos were queued.")
         return
 
-    table = Table(title=title)
+    table = styled_table(title)
     table.add_column("#", style="dim", width=4)
     table.add_column("Video ID", style="cyan", width=12)
     table.add_column("Job ID", style="cyan", width=12)
@@ -289,9 +283,5 @@ def _display_batch_results(
         )
 
     console.print(table)
-    console.print(
-        f"\n[green]{len(results)} video(s) queued successfully![/green]"
-    )
-    console.print(
-        "Track progress with: [bold]vidmation job list[/bold]"
-    )
+    success(f"{len(results)} video(s) queued successfully!")
+    info("Track progress with: [bold]vidmation job list[/bold]")

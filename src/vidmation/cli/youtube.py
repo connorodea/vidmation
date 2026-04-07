@@ -8,15 +8,24 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
+from vidmation.cli.theme import (
+    console,
+    err,
+    error,
+    header,
+    info,
+    kv,
+    result_panel,
+    spinner,
+    status_badge,
+    step,
+    styled_table,
+    success,
+    warning,
+)
 from vidmation.config.settings import get_settings
 from vidmation.db.engine import get_session, init_db
-
-console = Console()
-err_console = Console(stderr=True)
 
 youtube_app = typer.Typer(no_args_is_help=True)
 
@@ -39,43 +48,42 @@ def youtube_setup() -> None:
     client_secret_path = data_dir / "client_secret.json"
     token_path = data_dir / "youtube_token.json"
 
-    console.print(Panel.fit(
-        "[bold]YouTube API Setup[/bold]\n\n"
-        "This will connect VIDMATION to your YouTube channel.\n"
+    console.print(header(
+        "YouTube API Setup",
+        subtitle="Connect VIDMATION to your YouTube channel.\n"
         "You need a Google Cloud project with the YouTube Data API v3 enabled.",
-        title="Setup",
     ))
 
     # Step 1: Check for client_secret.json
     if client_secret_path.exists():
-        console.print(f"[green]Found[/green] client_secret.json at {client_secret_path}")
+        success(f"Found client_secret.json at {client_secret_path}")
     else:
+        step(1, "Download your OAuth client secret:")
         console.print(
-            "\n[yellow]Step 1:[/yellow] Download your OAuth client secret:\n"
             "  1. Go to [link=https://console.cloud.google.com/apis/credentials]Google Cloud Console[/link]\n"
             "  2. Create or select a project\n"
             "  3. Enable the [bold]YouTube Data API v3[/bold]\n"
             "  4. Create OAuth 2.0 credentials (Desktop application)\n"
             "  5. Download the JSON file\n"
-            f"  6. Save it as: [cyan]{client_secret_path}[/cyan]\n"
+            f"  6. Save it as: [highlight]{client_secret_path}[/highlight]\n"
         )
         console.print("Press Enter after placing the file...", end="")
         input()
 
         if not client_secret_path.exists():
-            err_console.print(f"[red]Error:[/red] File not found at {client_secret_path}")
+            error(f"File not found at {client_secret_path}")
             raise typer.Exit(1)
 
     # Step 2: Run OAuth flow
     if token_path.exists():
-        console.print(f"[green]Found[/green] existing token at {token_path}")
+        success(f"Found existing token at {token_path}")
         reauth = typer.confirm("Re-authenticate?", default=False)
         if not reauth:
-            console.print("[green]Setup complete![/green] YouTube credentials are ready.")
+            success("Setup complete! YouTube credentials are ready.")
             return
 
-    console.print("\n[yellow]Step 2:[/yellow] Authenticating with YouTube...")
-    console.print("A browser window will open for Google sign-in.\n")
+    step(2, "Authenticating with YouTube...")
+    info("A browser window will open for Google sign-in.")
 
     from vidmation.services.youtube.auth import get_credentials
 
@@ -85,11 +93,11 @@ def youtube_setup() -> None:
             client_secret_path=client_secret_path,
         )
     except Exception as exc:
-        err_console.print(f"[red]OAuth failed:[/red] {exc}")
+        error(f"OAuth failed: {exc}")
         raise typer.Exit(1)
 
     # Step 3: Verify by fetching channel info
-    console.print("\n[yellow]Step 3:[/yellow] Verifying access...")
+    step(3, "Verifying access...")
 
     try:
         from googleapiclient.discovery import build
@@ -100,18 +108,19 @@ def youtube_setup() -> None:
 
         if channels:
             ch = channels[0]["snippet"]
-            console.print(Panel.fit(
-                f"[green]Connected![/green]\n\n"
-                f"  Channel: [bold]{ch['title']}[/bold]\n"
-                f"  ID:      [dim]{channels[0]['id']}[/dim]\n"
-                f"  Token:   [dim]{token_path}[/dim]",
-                title="YouTube Setup Complete",
+            console.print(result_panel(
+                "YouTube Setup Complete",
+                [
+                    ("Channel:", ch["title"]),
+                    ("ID:", f"[id]{channels[0]['id']}[/id]"),
+                    ("Token:", f"[path]{token_path}[/path]"),
+                ],
             ))
         else:
-            console.print("[yellow]Warning:[/yellow] No channels found for this account.")
+            warning("No channels found for this account.")
     except Exception as exc:
-        console.print(f"[yellow]Warning:[/yellow] Could not verify channel: {exc}")
-        console.print("[green]Token saved.[/green] You can try uploading to verify.")
+        warning(f"Could not verify channel: {exc}")
+        success("Token saved. You can try uploading to verify.")
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +146,7 @@ def youtube_upload(
     video_file = Path(video_path)
 
     if not video_file.exists():
-        err_console.print(f"[red]Error:[/red] Video file not found: {video_path}")
+        error(f"Video file not found: {video_path}")
         raise typer.Exit(1)
 
     # Load credentials
@@ -145,8 +154,8 @@ def youtube_upload(
     client_secret_path = settings.data_dir / "client_secret.json"
 
     if not token_path.exists():
-        err_console.print(
-            "[red]Error:[/red] YouTube not configured. "
+        error(
+            "YouTube not configured. "
             "Run [bold]vidmation youtube setup[/bold] first."
         )
         raise typer.Exit(1)
@@ -164,7 +173,7 @@ def youtube_upload(
         if script:
             from vidmation.services.youtube.metadata import YouTubeMetadataGenerator
 
-            with console.status("[cyan]Generating AI metadata...[/cyan]"):
+            with spinner("Generating AI metadata..."):
                 meta_gen = YouTubeMetadataGenerator(settings=settings)
                 from vidmation.config.profiles import get_default_profile
 
@@ -175,9 +184,9 @@ def youtube_upload(
             tags = tags or ",".join(metadata.get("tags", []))
             category = metadata.get("category_id", category)
 
-            console.print(f"[green]AI Title:[/green] {title}")
+            success(f"AI Title: {title}")
         else:
-            console.print("[yellow]Warning:[/yellow] --ai-metadata requires --script-file for best results.")
+            warning("--ai-metadata requires --script-file for best results.")
 
     # Defaults
     title = title or video_file.stem.replace("_", " ").title()
@@ -189,13 +198,13 @@ def youtube_upload(
     if schedule:
         publish_at = _parse_schedule(schedule)
         visibility = "private"  # Must be private for scheduled publishing
-        console.print(f"[cyan]Scheduled for:[/cyan] {publish_at.isoformat()}")
+        info(f"Scheduled for: {publish_at.isoformat()}")
 
     from vidmation.services.youtube.uploader import YouTubeUploader
 
     uploader = YouTubeUploader(credentials=creds)
 
-    with console.status("[cyan]Uploading to YouTube...[/cyan]"):
+    with spinner("Uploading to YouTube..."):
         if publish_at:
             video_id = uploader.upload_with_schedule(
                 video_path=video_file,
@@ -217,30 +226,30 @@ def youtube_upload(
                 visibility=visibility,
             )
 
-    console.print(Panel.fit(
-        f"[green]Upload successful![/green]\n\n"
-        f"  Video ID: [cyan]{video_id}[/cyan]\n"
-        f"  Title:    {title}\n"
-        f"  Status:   {visibility}"
-        + (f"\n  Scheduled: {publish_at.isoformat()}" if publish_at else "")
-        + f"\n  URL:      [link=https://youtube.com/watch?v={video_id}]https://youtube.com/watch?v={video_id}[/link]",
-        title="Uploaded",
-    ))
+    rows = [
+        ("Video ID:", f"[id]{video_id}[/id]"),
+        ("Title:", title),
+        ("Status:", status_badge(visibility)),
+    ]
+    if publish_at:
+        rows.append(("Scheduled:", publish_at.isoformat()))
+    rows.append(("URL:", f"[url]https://youtube.com/watch?v={video_id}[/url]"))
+    console.print(result_panel("Upload Successful", rows))
 
     # Upload captions if provided
     if srt:
         srt_path = Path(srt)
         if srt_path.exists():
-            with console.status("[cyan]Uploading captions...[/cyan]"):
+            with spinner("Uploading captions..."):
                 uploader.upload_captions(
                     video_id=video_id,
                     srt_path=srt_path,
                     language="en",
                     name="English",
                 )
-            console.print("[green]Captions uploaded.[/green]")
+            success("Captions uploaded.")
         else:
-            console.print(f"[yellow]Warning:[/yellow] SRT file not found: {srt}")
+            warning(f"SRT file not found: {srt}")
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +266,7 @@ def youtube_list(
     client_secret_path = settings.data_dir / "client_secret.json"
 
     if not token_path.exists():
-        err_console.print("[red]Error:[/red] Run [bold]vidmation youtube setup[/bold] first.")
+        error("Run [bold]vidmation youtube setup[/bold] first.")
         raise typer.Exit(1)
 
     from vidmation.services.youtube.auth import get_credentials
@@ -266,30 +275,27 @@ def youtube_list(
     creds = get_credentials(token_path=token_path, client_secret_path=client_secret_path)
     uploader = YouTubeUploader(credentials=creds)
 
-    with console.status("[cyan]Fetching videos...[/cyan]"):
+    with spinner("Fetching videos..."):
         videos = uploader.list_channel_videos(max_results=max_results)
 
     if not videos:
-        console.print("[yellow]No videos found on your channel.[/yellow]")
+        warning("No videos found on your channel.")
         return
 
-    table = Table(title="Your YouTube Videos", show_lines=True)
-    table.add_column("Title", style="cyan", max_width=50)
-    table.add_column("ID", style="dim", max_width=15)
-    table.add_column("Published", style="dim")
+    table = styled_table("Your YouTube Videos", show_lines=True)
+    table.add_column("Title", style="highlight", max_width=50)
+    table.add_column("ID", style="id", max_width=15)
+    table.add_column("Published", style="muted")
     table.add_column("Views", justify="right")
     table.add_column("Status")
 
     for v in videos:
-        status_color = {"public": "green", "unlisted": "yellow", "private": "red"}.get(
-            v.get("privacy", ""), "dim"
-        )
         table.add_row(
             v.get("title", "N/A"),
             v.get("id", ""),
             v.get("published_at", "")[:10],
             str(v.get("view_count", 0)),
-            f"[{status_color}]{v.get('privacy', 'unknown')}[/{status_color}]",
+            status_badge(v.get("privacy", "unknown")),
         )
 
     console.print(table)
@@ -309,7 +315,7 @@ def youtube_status(
     client_secret_path = settings.data_dir / "client_secret.json"
 
     if not token_path.exists():
-        err_console.print("[red]Error:[/red] Run [bold]vidmation youtube setup[/bold] first.")
+        error("Run [bold]vidmation youtube setup[/bold] first.")
         raise typer.Exit(1)
 
     from vidmation.services.youtube.auth import get_credentials
@@ -318,28 +324,30 @@ def youtube_status(
     creds = get_credentials(token_path=token_path, client_secret_path=client_secret_path)
     uploader = YouTubeUploader(credentials=creds)
 
-    with console.status("[cyan]Fetching video details...[/cyan]"):
+    with spinner("Fetching video details..."):
         details = uploader.get_video_details(video_id)
 
     if not details:
-        err_console.print(f"[red]Error:[/red] Video '{video_id}' not found.")
+        error(f"Video '{video_id}' not found.")
         raise typer.Exit(1)
 
     snippet = details.get("snippet", {})
     stats = details.get("statistics", {})
-    status = details.get("status", {})
+    vid_status = details.get("status", {})
+    privacy = vid_status.get("privacyStatus", "unknown")
 
-    console.print(Panel.fit(
-        f"[bold]{snippet.get('title', 'N/A')}[/bold]\n\n"
-        f"  Video ID:    [cyan]{video_id}[/cyan]\n"
-        f"  Channel:     {snippet.get('channelTitle', 'N/A')}\n"
-        f"  Published:   {snippet.get('publishedAt', 'N/A')}\n"
-        f"  Privacy:     {status.get('privacyStatus', 'N/A')}\n"
-        f"  Views:       {stats.get('viewCount', '0')}\n"
-        f"  Likes:       {stats.get('likeCount', '0')}\n"
-        f"  Comments:    {stats.get('commentCount', '0')}\n"
-        f"  Description: {snippet.get('description', '')[:200]}...",
-        title="Video Details",
+    console.print(result_panel(
+        snippet.get("title", "N/A"),
+        [
+            ("Video ID:", f"[id]{video_id}[/id]"),
+            ("Channel:", snippet.get("channelTitle", "N/A")),
+            ("Published:", snippet.get("publishedAt", "N/A")),
+            ("Privacy:", status_badge(privacy)),
+            ("Views:", stats.get("viewCount", "0")),
+            ("Likes:", stats.get("likeCount", "0")),
+            ("Comments:", stats.get("commentCount", "0")),
+            ("Description:", f"{snippet.get('description', '')[:200]}..."),
+        ],
     ))
 
 
@@ -356,7 +364,7 @@ def youtube_update(
 ) -> None:
     """Update metadata on an existing YouTube video."""
     if not title and not description and not tags:
-        err_console.print("[red]Error:[/red] Provide at least one of --title, --description, or --tags.")
+        error("Provide at least one of --title, --description, or --tags.")
         raise typer.Exit(1)
 
     settings = get_settings()
@@ -371,7 +379,7 @@ def youtube_update(
 
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
 
-    with console.status("[cyan]Updating video...[/cyan]"):
+    with spinner("Updating video..."):
         uploader.update_video_metadata(
             video_id=video_id,
             title=title,
@@ -379,7 +387,7 @@ def youtube_update(
             tags=tag_list,
         )
 
-    console.print(f"[green]Video {video_id} updated successfully.[/green]")
+    success(f"Video {video_id} updated successfully.")
 
 
 # ---------------------------------------------------------------------------

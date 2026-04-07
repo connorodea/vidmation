@@ -7,12 +7,8 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
-console = Console()
-err_console = Console(stderr=True)
+from vidmation.cli.theme import console, error, success, styled_table, result_panel, spinner, header
 
 audio_app = typer.Typer(no_args_is_help=True)
 
@@ -53,21 +49,21 @@ def audio_generate(
 
     audio_path = Path(file)
     if not audio_path.exists():
-        err_console.print(f"[red]Error:[/red] Audio file not found: {file}")
+        error(f"Audio file not found: {file}")
         raise typer.Exit(1)
 
-    console.print(
-        Panel.fit(
-            f"[bold]Audio file:[/bold] {audio_path.name}\n"
-            f"[bold]Channel:[/bold] {channel}\n"
-            f"[bold]Format:[/bold] {format}",
-            title="Audio-First Pipeline",
-        )
-    )
+    console.print(result_panel(
+        "Audio-First Pipeline",
+        [
+            ("Audio file:", audio_path.name),
+            ("Channel:", channel),
+            ("Format:", format),
+        ],
+    ))
 
     pipeline = AudioFirstPipeline(settings=get_settings())
 
-    with console.status("[cyan]Running audio-first pipeline...[/cyan]"):
+    with spinner("Running audio-first pipeline..."):
         try:
             work_dir = pipeline.generate(
                 audio_path=audio_path,
@@ -75,10 +71,10 @@ def audio_generate(
                 format=format,
             )
         except FileNotFoundError as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
         except ValueError as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
 
     # Load the pipeline state for display.
@@ -88,18 +84,17 @@ def audio_generate(
         state = json.loads(state_path.read_text(encoding="utf-8"))
 
     console.print()
-    console.print(
-        Panel.fit(
-            f"[green]Audio-first pipeline checkpoint complete![/green]\n\n"
-            f"  Work directory: [dim]{work_dir}[/dim]\n"
-            f"  Sections found: [cyan]{state.get('sections_count', 'N/A')}[/cyan]\n"
-            f"  Words transcribed: [cyan]{state.get('words_count', 'N/A')}[/cyan]\n"
-            f"  Status: [yellow]{state.get('status', 'unknown')}[/yellow]\n\n"
-            f"  Steps completed: {', '.join(state.get('steps_completed', []))}\n"
-            f"  Steps remaining: {', '.join(state.get('steps_remaining', []))}",
-            title="Pipeline Checkpoint",
-        )
-    )
+    console.print(result_panel(
+        "Pipeline Checkpoint",
+        [
+            ("Work directory:", str(work_dir)),
+            ("Sections found:", str(state.get("sections_count", "N/A"))),
+            ("Words transcribed:", str(state.get("words_count", "N/A"))),
+            ("Status:", state.get("status", "unknown")),
+            ("Steps completed:", ", ".join(state.get("steps_completed", []))),
+            ("Steps remaining:", ", ".join(state.get("steps_remaining", []))),
+        ],
+    ))
 
 
 # ---------------------------------------------------------------------------
@@ -134,38 +129,38 @@ def audio_analyze(
 
     audio_path = Path(file)
     if not audio_path.exists():
-        err_console.print(f"[red]Error:[/red] Audio file not found: {file}")
+        error(f"Audio file not found: {file}")
         raise typer.Exit(1)
 
     pipeline = AudioFirstPipeline(settings=get_settings())
 
-    with console.status("[cyan]Analyzing audio...[/cyan]"):
+    with spinner("Analyzing audio..."):
         try:
             analysis = pipeline.analyze_audio(audio_path)
         except FileNotFoundError as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
         except ValueError as exc:
-            err_console.print(f"[red]Error:[/red] {exc}")
+            error(str(exc))
             raise typer.Exit(1)
 
     # Display summary.
     console.print()
-    console.print(
-        Panel.fit(
-            f"[bold]Audio file:[/bold] {audio_path.name}\n"
-            f"[bold]Duration:[/bold] {analysis.get('total_duration_seconds', 0):.1f}s\n"
-            f"[bold]Words:[/bold] {analysis.get('word_count', 0)}\n"
-            f"[bold]Topic:[/bold] {analysis.get('overall_topic', 'N/A')}\n"
-            f"[bold]Suggested title:[/bold] {analysis.get('suggested_title', 'N/A')}",
-            title="Audio Analysis",
-        )
-    )
+    console.print(result_panel(
+        "Audio Analysis",
+        [
+            ("Audio file:", audio_path.name),
+            ("Duration:", f"{analysis.get('total_duration_seconds', 0):.1f}s"),
+            ("Words:", str(analysis.get("word_count", 0))),
+            ("Topic:", analysis.get("overall_topic", "N/A")),
+            ("Suggested title:", analysis.get("suggested_title", "N/A")),
+        ],
+    ))
 
     # Display sections table.
     sections = analysis.get("sections", [])
     if sections:
-        table = Table(title=f"Detected Sections ({len(sections)})")
+        table = styled_table(f"Detected Sections ({len(sections)})")
         table.add_column("#", style="dim", width=4)
         table.add_column("Heading", style="bold", max_width=40)
         table.add_column("Start", width=8, justify="right")
@@ -191,7 +186,7 @@ def audio_analyze(
     segments = analysis.get("segments", [])
     if segments:
         console.print()
-        table = Table(title=f"Audio Segments ({len(segments)})")
+        table = styled_table(f"Audio Segments ({len(segments)})")
         table.add_column("#", style="dim", width=4)
         table.add_column("Start", width=8, justify="right")
         table.add_column("End", width=8, justify="right")
@@ -219,7 +214,7 @@ def audio_analyze(
             json.dumps(save_data, indent=2, default=str),
             encoding="utf-8",
         )
-        console.print(f"\n[green]Analysis saved to {output_path}[/green]")
+        success(f"Analysis saved to {output_path}")
 
 
 # ---------------------------------------------------------------------------

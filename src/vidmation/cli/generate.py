@@ -3,22 +3,28 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
+from vidmation.cli.theme import (
+    console,
+    err,
+    header,
+    result_panel,
+    success,
+    error,
+    warning,
+    step,
+    spinner,
+    pipeline_progress,
+    kv,
+)
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
 from vidmation.db.engine import init_db
 from vidmation.models.video import VideoFormat
-
-console = Console()
-err_console = Console(stderr=True)
 
 generate_app = typer.Typer(no_args_is_help=True)
 
@@ -64,15 +70,16 @@ def _generate_video_async(topic: str, channel: str, video_format: VideoFormat) -
             format=video_format,
         )
     except ValueError as exc:
-        err_console.print(f"[red]Error:[/red] {exc}")
+        error(str(exc))
         raise typer.Exit(1)
 
-    console.print(Panel.fit(
-        f"[green]Job queued successfully![/green]\n\n"
-        f"  Video ID: [cyan]{video.id}[/cyan]\n"
-        f"  Job ID:   [cyan]{job.id}[/cyan]\n\n"
-        f"Track progress with: [bold]vidmation job status {job.id}[/bold]",
-        title="Queued",
+    console.print(result_panel(
+        "Job queued successfully!",
+        [
+            ("Video ID:", f"[id]{video.id}[/id]"),
+            ("Job ID:", f"[id]{job.id}[/id]"),
+            ("Track:", f"[bold]vidmation job status {job.id}[/bold]"),
+        ],
     ))
 
 
@@ -100,8 +107,8 @@ def _generate_video_sync(
     channel_repo = ChannelRepo(session)
     ch = channel_repo.get_by_name(channel)
     if ch is None:
-        err_console.print(
-            f"[red]Error:[/red] Channel '{channel}' not found.  "
+        error(
+            f"Channel '{channel}' not found.  "
             f"Create it with: [bold]vidmation channel add --name '{channel}'[/bold]"
         )
         session.close()
@@ -131,21 +138,15 @@ def _generate_video_sync(
 
     orchestrator = PipelineOrchestrator(stages=stages, settings=settings)
 
-    console.print(Panel.fit(
-        f"[bold]Topic:[/bold] {topic}\n"
-        f"[bold]Channel:[/bold] {channel}\n"
-        f"[bold]Format:[/bold] {video_format.value}\n"
-        f"[bold]Video ID:[/bold] {video_id}\n"
-        f"[bold]Stages:[/bold] {len(stages)}",
-        title="Pipeline Starting",
-    ))
+    console.print(header("Pipeline Starting"))
+    kv("Topic:", topic)
+    kv("Channel:", channel)
+    kv("Format:", video_format.value)
+    kv("Video ID:", f"[id]{video_id}[/id]")
+    kv("Stages:", str(len(stages)))
+    console.print()
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
+    with pipeline_progress() as progress:
         task = progress.add_task("Running pipeline...", total=len(stages))
 
         # Monkey-patch orchestrator to update progress
@@ -156,13 +157,13 @@ def _generate_video_sync(
             total_stages = len(orchestrator.stages)
             for idx, (name, stage_fn) in enumerate(orchestrator.stages, 1):
                 context.current_stage = name
-                progress.update(task, description=f"[cyan]{name}[/cyan]")
+                progress.update(task, description=f"[accent]{name}[/accent]")
 
                 try:
                     stage_fn(context, orchestrator.settings)
                 except Exception as exc:
-                    progress.update(task, description=f"[red]FAILED: {name}[/red]")
-                    err_console.print(f"\n[red]Pipeline failed at stage '{name}':[/red] {exc}")
+                    progress.update(task, description=f"[error]FAILED: {name}[/error]")
+                    error(f"Pipeline failed at stage '{name}': {exc}")
                     context.save()
                     raise typer.Exit(1)
 
@@ -177,13 +178,14 @@ def _generate_video_sync(
     session.close()
 
     console.print()
-    console.print(Panel.fit(
-        f"[green]Pipeline completed![/green]\n\n"
-        f"  Video ID:   [cyan]{ctx.video_id}[/cyan]\n"
-        f"  Title:      {ctx.script.get('title', 'N/A') if ctx.script else 'N/A'}\n"
-        f"  Video Path: [dim]{ctx.final_video_path or 'N/A'}[/dim]\n"
-        f"  Thumbnail:  [dim]{ctx.thumbnail_path or 'N/A'}[/dim]",
-        title="Complete",
+    console.print(result_panel(
+        "Pipeline completed!",
+        [
+            ("Video ID:", f"[id]{ctx.video_id}[/id]"),
+            ("Title:", ctx.script.get("title", "N/A") if ctx.script else "N/A"),
+            ("Video Path:", f"[path]{ctx.final_video_path or 'N/A'}[/path]"),
+            ("Thumbnail:", f"[path]{ctx.thumbnail_path or 'N/A'}[/path]"),
+        ],
     ))
 
 
@@ -208,7 +210,7 @@ def generate_script(
 
     from vidmation.services.scriptgen import create_script_generator
 
-    with console.status("[cyan]Generating script...[/cyan]"):
+    with spinner("Generating script..."):
         generator = create_script_generator(settings=settings)
         script = generator.generate(topic=topic, profile=profile)
 
@@ -216,7 +218,7 @@ def generate_script(
 
     if output:
         Path(output).write_text(script_json, encoding="utf-8")
-        console.print(f"[green]Script saved to {output}[/green]")
+        success(f"Script saved to [path]{output}[/path]")
     else:
         console.print_json(script_json)
 
@@ -239,7 +241,7 @@ def generate_voiceover(
 
     script_path = Path(script_file)
     if not script_path.exists():
-        err_console.print(f"[red]Error:[/red] Script file not found: {script_file}")
+        error(f"Script file not found: {script_file}")
         raise typer.Exit(1)
 
     script = json.loads(script_path.read_text(encoding="utf-8"))
@@ -260,7 +262,7 @@ def generate_voiceover(
     full_narration = "\n\n".join(parts)
     output_path = Path(output) if output else Path("voiceover.mp3")
 
-    with console.status("[cyan]Synthesising voiceover...[/cyan]"):
+    with spinner("Synthesising voiceover..."):
         tts = create_tts_provider(settings=settings)
         audio_path, duration = tts.synthesize(
             text=full_narration,
@@ -268,10 +270,7 @@ def generate_voiceover(
             voice_config=profile.voice,
         )
 
-    console.print(
-        f"[green]Voiceover saved to {audio_path}[/green] "
-        f"({duration:.1f}s)"
-    )
+    success(f"Voiceover saved to [path]{audio_path}[/path] ({duration:.1f}s)")
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +297,7 @@ def generate_thumbnail(
     video_repo = VideoRepo(session)
     video = video_repo.get(video_id)
     if video is None:
-        err_console.print(f"[red]Error:[/red] Video '{video_id}' not found.")
+        error(f"Video '{video_id}' not found.")
         session.close()
         raise typer.Exit(1)
 
@@ -313,7 +312,7 @@ def generate_thumbnail(
 
     output_path = Path(output) if output else Path(f"thumbnail_{video_id[:8]}.png")
 
-    with console.status("[cyan]Generating thumbnail...[/cyan]"):
+    with spinner("Generating thumbnail..."):
         generator = create_image_generator(settings=settings)
         saved_path = generator.generate(
             prompt=f"YouTube thumbnail for: {title}. Style: {profile.thumbnail.style}",
@@ -324,7 +323,7 @@ def generate_thumbnail(
     video_repo.update_status(video_id, video.status, thumbnail_path=str(saved_path))
     session.close()
 
-    console.print(f"[green]Thumbnail saved to {saved_path}[/green]")
+    success(f"Thumbnail saved to [path]{saved_path}[/path]")
 
 
 # ---------------------------------------------------------------------------
@@ -359,29 +358,30 @@ def generate_from_blog(
     # Step 1: Scrape and convert blog to script
     from vidmation.services.blog2video import create_blog_converter
 
-    with console.status("[cyan]Scraping blog and generating script...[/cyan]"):
+    with spinner("Scraping blog and generating script..."):
         converter = create_blog_converter(settings=settings)
         script = converter.convert(url=url, channel_profile=profile)
 
-    console.print(Panel.fit(
-        f"[green]Blog converted![/green]\n\n"
-        f"  Source: [link={url}]{url}[/link]\n"
-        f"  Title:  [bold]{script.get('title', 'N/A')}[/bold]\n"
-        f"  Sections: {len(script.get('sections', []))}\n"
-        f"  Duration: ~{script.get('total_estimated_duration_seconds', 0)}s",
-        title="Blog → Script",
+    console.print(result_panel(
+        "Blog converted!",
+        [
+            ("Source:", f"[url]{url}[/url]"),
+            ("Title:", f"[bold]{script.get('title', 'N/A')}[/bold]"),
+            ("Sections:", str(len(script.get("sections", [])))),
+            ("Duration:", f"~{script.get('total_estimated_duration_seconds', 0)}s"),
+        ],
     ))
 
     # Save script
     script_json = json.dumps(script, indent=2)
     if output:
         Path(output).write_text(script_json, encoding="utf-8")
-        console.print(f"[green]Script saved to {output}[/green]")
+        success(f"Script saved to [path]{output}[/path]")
     else:
         script_output = Path(f"output/blog_script_{script.get('title', 'untitled')[:30].replace(' ', '_')}.json")
         script_output.parent.mkdir(parents=True, exist_ok=True)
         script_output.write_text(script_json, encoding="utf-8")
-        console.print(f"[green]Script saved to {script_output}[/green]")
+        success(f"Script saved to [path]{script_output}[/path]")
 
     # Optionally run full video pipeline
     if full_video:
@@ -418,25 +418,18 @@ def generate_from_blog(
 
         orchestrator = PipelineOrchestrator(stages=stages, settings=settings)
 
-        from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
+        with pipeline_progress() as progress:
             task = progress.add_task("Running pipeline...", total=len(stages))
 
             for name, stage_fn in stages:
                 ctx.current_stage = name
-                progress.update(task, description=f"[cyan]{name}[/cyan]")
+                progress.update(task, description=f"[accent]{name}[/accent]")
 
                 try:
                     stage_fn(ctx, settings)
                 except Exception as exc:
-                    progress.update(task, description=f"[red]FAILED: {name}[/red]")
-                    err_console.print(f"\n[red]Pipeline failed at '{name}':[/red] {exc}")
+                    progress.update(task, description=f"[error]FAILED: {name}[/error]")
+                    error(f"Pipeline failed at '{name}': {exc}")
                     ctx.save()
                     raise typer.Exit(1)
 
@@ -444,13 +437,14 @@ def generate_from_blog(
                 ctx.save()
                 progress.advance(task)
 
-        console.print(Panel.fit(
-            f"[green]Blog → Video complete![/green]\n\n"
-            f"  Source:    [link={url}]{url}[/link]\n"
-            f"  Title:     {script.get('title', 'N/A')}\n"
-            f"  Video:     [dim]{ctx.final_video_path or 'N/A'}[/dim]\n"
-            f"  Thumbnail: [dim]{ctx.thumbnail_path or 'N/A'}[/dim]",
-            title="Complete",
+        console.print(result_panel(
+            "Blog \u2192 Video complete!",
+            [
+                ("Source:", f"[url]{url}[/url]"),
+                ("Title:", script.get("title", "N/A")),
+                ("Video:", f"[path]{ctx.final_video_path or 'N/A'}[/path]"),
+                ("Thumbnail:", f"[path]{ctx.thumbnail_path or 'N/A'}[/path]"),
+            ],
         ))
 
 

@@ -7,15 +7,11 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
+from vidmation.cli.theme import console, success, info, styled_table, spinner
 from vidmation.config.settings import get_settings
 from vidmation.db.engine import init_db
-
-console = Console()
-err_console = Console(stderr=True)
 
 content_app = typer.Typer(no_args_is_help=True)
 
@@ -43,7 +39,7 @@ def content_plan(
     init_db()
     settings = get_settings()
 
-    with console.status("[cyan]Generating content calendar...[/cyan]"):
+    with spinner("Generating content calendar..."):
         planner = ContentPlanner(settings=settings)
         entries = planner.generate_content_calendar(
             channel_name=channel,
@@ -52,7 +48,7 @@ def content_plan(
         )
 
     # Display results
-    table = Table(title=f"Content Calendar — {channel} ({weeks} weeks)")
+    table = styled_table(f"Content Calendar — {channel} ({weeks} weeks)")
     table.add_column("Date", style="cyan", width=12)
     table.add_column("Title", style="bold", max_width=40)
     table.add_column("Format", style="dim", width=12)
@@ -87,13 +83,13 @@ def content_plan(
         cal.channel_name = channel
         cal.add_entries(entries)
         path = cal.save()
-        console.print(f"\n[green]Calendar saved:[/green] {path}")
-        console.print(f"  Calendar ID: [cyan]{cal.calendar_id}[/cyan]")
+        success(f"Calendar saved: {path}")
+        info(f"Calendar ID: [cyan]{cal.calendar_id}[/cyan]")
 
     # Optional JSON export
     if output:
         Path(output).write_text(json.dumps(entries, indent=2), encoding="utf-8")
-        console.print(f"[green]JSON exported to {output}[/green]")
+        success(f"JSON exported to {output}")
 
     console.print(f"\n[dim]Total entries: {len(entries)}[/dim]")
 
@@ -116,11 +112,11 @@ def content_trending(
 
     settings = get_settings()
 
-    with console.status(f"[cyan]Finding trending topics in '{niche}'...[/cyan]"):
+    with spinner(f"Finding trending topics in '{niche}'..."):
         planner = ContentPlanner(settings=settings)
         topics = planner.trending_topics(niche=niche, count=count)
 
-    table = Table(title=f"Trending Topics — {niche}")
+    table = styled_table(f"Trending Topics — {niche}")
     table.add_column("Topic", style="bold", max_width=40)
     table.add_column("Relevance", width=10)
     table.add_column("Competition", width=12)
@@ -155,7 +151,7 @@ def content_trending(
 
     if output:
         Path(output).write_text(json.dumps(topics, indent=2), encoding="utf-8")
-        console.print(f"\n[green]JSON saved to {output}[/green]")
+        success(f"JSON saved to {output}")
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +178,7 @@ def content_series(
 
         settings = get_settings()
 
-        with console.status("[cyan]Generating series ideas...[/cyan]"):
+        with spinner("Generating series ideas..."):
             planner = ContentPlanner(settings=settings)
             ideas = planner.suggest_series(channel_name=channel)
 
@@ -208,7 +204,7 @@ def content_series(
         console.print("  Create one: [bold]vidmation content series --suggest --channel default[/bold]")
         return
 
-    table = Table(title="Video Series")
+    table = styled_table("Video Series")
     table.add_column("Name", style="bold")
     table.add_column("Channel", style="dim")
     table.add_column("Episodes", width=10)
@@ -254,7 +250,7 @@ def content_gaps(
     init_db()
     settings = get_settings()
 
-    with console.status(f"[cyan]Analysing content gaps for '{channel}'...[/cyan]"):
+    with spinner(f"Analysing content gaps for '{channel}'..."):
         planner = ContentPlanner(settings=settings)
         result = planner.analyze_content_gaps(channel_name=channel)
 
@@ -270,7 +266,7 @@ def content_gaps(
     # Gaps
     gaps = result.get("gaps", [])
     if gaps:
-        table = Table(title="Content Gaps")
+        table = styled_table("Content Gaps")
         table.add_column("Topic", style="bold", max_width=40)
         table.add_column("Reason", style="dim", max_width=60)
 
@@ -293,7 +289,7 @@ def content_gaps(
 
     if output:
         Path(output).write_text(json.dumps(result, indent=2), encoding="utf-8")
-        console.print(f"\n[green]Full analysis saved to {output}[/green]")
+        success(f"Full analysis saved to {output}")
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +310,7 @@ def content_keywords(
 
     settings = get_settings()
 
-    with console.status("[cyan]Researching keywords...[/cyan]"):
+    with spinner("Researching keywords..."):
         seo = SEOOptimizer(settings=settings)
         result = seo.keyword_research(topic=topic, niche=niche)
 
@@ -362,4 +358,4 @@ def content_keywords(
 
     if output:
         Path(output).write_text(json.dumps(result, indent=2), encoding="utf-8")
-        console.print(f"\n[green]Saved to {output}[/green]")
+        success(f"Saved to {output}")

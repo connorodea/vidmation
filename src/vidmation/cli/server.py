@@ -6,11 +6,9 @@ import threading
 from typing import Optional
 
 import typer
-from rich.console import Console
 
+from vidmation.cli.theme import console, err, error, success, warning, styled_table, status_badge, result_panel, spinner, header, LOGO, TAGLINE, VERSION
 from vidmation.db.engine import init_db
-
-console = Console()
 
 server_app = typer.Typer(no_args_is_help=True)
 
@@ -38,10 +36,11 @@ def serve(
     bind_host = host or settings.web_host
     bind_port = port or settings.web_port
 
-    console.print(
-        f"[green]Starting web server[/green] at "
-        f"[cyan]http://{bind_host}:{bind_port}[/cyan]"
-    )
+    console.print(LOGO)
+    console.print(TAGLINE)
+    console.print(header("Web Server", f"v{VERSION}"))
+    console.print()
+    success(f"Starting web server at [url]http://{bind_host}:{bind_port}[/url]")
 
     uvicorn.run(
         "vidmation.web.app:app",
@@ -76,6 +75,11 @@ def worker(
 
     settings = get_settings()
 
+    console.print(LOGO)
+    console.print(TAGLINE)
+    console.print(header("Job Worker", f"v{VERSION}"))
+    console.print()
+
     # Optionally start web server in a background thread
     if with_web:
         _start_web_thread(web_host, web_port)
@@ -84,10 +88,7 @@ def worker(
     if with_scheduler:
         _start_scheduler_thread(settings)
 
-    console.print(
-        f"[green]Starting job worker[/green] "
-        f"(poll every {poll_interval}s)"
-    )
+    success(f"Starting job worker (poll every {poll_interval}s)")
 
     job_worker = JobWorker(settings=settings, poll_interval=poll_interval)
     job_worker.run_forever()
@@ -111,10 +112,7 @@ def _start_web_thread(host: str, port: int) -> threading.Thread:
 
     t = threading.Thread(target=_run, daemon=True, name="web-server")
     t.start()
-    console.print(
-        f"[green]Web server started[/green] at "
-        f"[cyan]http://{host}:{port}[/cyan] (background thread)"
-    )
+    success(f"Web server started at [url]http://{host}:{port}[/url] (background thread)")
     return t
 
 
@@ -124,5 +122,5 @@ def _start_scheduler_thread(settings) -> threading.Thread:
 
     scheduler = VideoScheduler(settings=settings)
     t = scheduler.run_in_thread()
-    console.print("[green]Scheduler started[/green] (background thread)")
+    success("Scheduler started (background thread)")
     return t

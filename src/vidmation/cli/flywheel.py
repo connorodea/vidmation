@@ -7,14 +7,22 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
+from vidmation.cli.theme import (
+    console,
+    err,
+    header,
+    result_panel,
+    success,
+    error,
+    warning,
+    info,
+    spinner,
+    styled_table,
+    kv,
+    divider,
+)
 from vidmation.config.settings import get_settings
-
-console = Console()
-err_console = Console(stderr=True)
 
 flywheel_app = typer.Typer(no_args_is_help=True)
 
@@ -83,10 +91,10 @@ def flywheel_run(
     out_dir = Path(output_dir)
 
     if not video_file.exists():
-        err_console.print(f"[red]Error:[/red] Video not found: {video_path}")
+        error(f"Video not found: {video_path}")
         raise typer.Exit(1)
     if not script_path.exists():
-        err_console.print(f"[red]Error:[/red] Script not found: {script_file}")
+        error(f"Script not found: {script_file}")
         raise typer.Exit(1)
 
     script = json.loads(script_path.read_text(encoding="utf-8"))
@@ -114,25 +122,27 @@ def flywheel_run(
             copy_targets.extend(c)
     target_platforms = user_platforms
 
-    console.print(Panel.fit(
-        f"[bold]Content Flywheel[/bold]\n\n"
-        f"  Video:     [cyan]{video_file.name}[/cyan]\n"
-        f"  Script:    [cyan]{script_path.name}[/cyan]\n"
-        f"  Platforms: {', '.join(target_platforms)}\n"
-        f"  Output:    [dim]{out_dir}[/dim]",
-        title="Flywheel Starting",
+    console.print(result_panel(
+        "Content Flywheel",
+        [
+            ("Video:", f"[highlight]{video_file.name}[/highlight]"),
+            ("Script:", f"[highlight]{script_path.name}[/highlight]"),
+            ("Platforms:", ", ".join(target_platforms)),
+            ("Output:", f"[path]{out_dir}[/path]"),
+        ],
+        status="success",
     ))
 
     results: dict[str, dict] = {}
 
     # Step 1: Generate AI social media copy
     if not skip_copy:
-        console.print("\n[bold]Step 1:[/bold] Generating social media copy with AI...")
+        info("Step 1: Generating social media copy with AI...")
         try:
             from vidmation.services.repurpose import create_repurposer
             from vidmation.config.profiles import get_default_profile
 
-            with console.status("[cyan]AI generating platform-specific content...[/cyan]"):
+            with spinner("AI generating platform-specific content..."):
                 repurposer = create_repurposer(settings=settings)
                 copy_results = repurposer.generate(
                     script=script,
@@ -153,19 +163,19 @@ def flywheel_run(
                 _write_readable_copy(text_path, platform_name, content)
                 results[platform_name]["copy_text"] = str(text_path)
 
-            console.print(f"  [green]Generated copy for {len(copy_results)} platforms[/green]")
+            success(f"Generated copy for {len(copy_results)} platforms")
         except Exception as exc:
-            console.print(f"  [yellow]Warning:[/yellow] AI copy generation failed: {exc}")
+            warning(f"AI copy generation failed: {exc}")
 
     # Step 2: Reformat video for each platform
     if not skip_video:
-        console.print("\n[bold]Step 2:[/bold] Reformatting video for each platform...")
+        info("Step 2: Reformatting video for each platform...")
         try:
             from vidmation.platforms.exporter import MultiPlatformExporter
 
             exporter = MultiPlatformExporter(output_dir=out_dir)
 
-            with console.status("[cyan]Reformatting video...[/cyan]"):
+            with spinner("Reformatting video..."):
                 video_results = exporter.export(
                     video_path=video_file,
                     platforms=video_targets,
@@ -173,14 +183,14 @@ def flywheel_run(
 
             for platform_name, path in video_results.items():
                 results.setdefault(platform_name, {})["video"] = str(path)
-                console.print(f"  [green]{platform_name}:[/green] {path.name}")
+                success(f"{platform_name}: {path.name}")
 
         except Exception as exc:
-            console.print(f"  [yellow]Warning:[/yellow] Video reformatting failed: {exc}")
+            warning(f"Video reformatting failed: {exc}")
 
     # Step 3: Extract highlight clips
     if not skip_video and not skip_copy:
-        console.print("\n[bold]Step 3:[/bold] Extracting highlight clips...")
+        info("Step 3: Extracting highlight clips...")
         clip_count = 0
         for platform_name in target_platforms:
             copy_path = out_dir / platform_name / "social_copy.json"
@@ -208,10 +218,10 @@ def flywheel_run(
                     _extract_clip(video_file, clip_path, start, duration)
                     clip_count += 1
                 except Exception as exc:
-                    console.print(f"  [yellow]Warning:[/yellow] Clip extraction failed: {exc}")
+                    warning(f"Clip extraction failed: {exc}")
 
         if clip_count > 0:
-            console.print(f"  [green]Extracted {clip_count} highlight clips[/green]")
+            success(f"Extracted {clip_count} highlight clips")
 
     # Summary
     console.print()
@@ -227,11 +237,11 @@ def flywheel_run(
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     # Print summary table
-    table = Table(title="Flywheel Results", show_lines=True)
-    table.add_column("Platform", style="cyan")
-    table.add_column("Video", style="green")
-    table.add_column("Copy", style="green")
-    table.add_column("Clips", style="green")
+    table = styled_table("Flywheel Results", show_lines=True)
+    table.add_column("Platform", style="highlight")
+    table.add_column("Video", style="success")
+    table.add_column("Copy", style="success")
+    table.add_column("Clips", style="success")
 
     for platform_name in target_platforms:
         data = results.get(platform_name, {})
@@ -239,14 +249,15 @@ def flywheel_run(
         clip_count = len(list(clips_dir.glob("*.mp4"))) if clips_dir.exists() else 0
         table.add_row(
             platform_name,
-            "Yes" if "video" in data else "-",
-            "Yes" if "copy" in data else "-",
-            str(clip_count) if clip_count > 0 else "-",
+            "[success]Yes[/success]" if "video" in data else "[muted]-[/muted]",
+            "[success]Yes[/success]" if "copy" in data else "[muted]-[/muted]",
+            str(clip_count) if clip_count > 0 else "[muted]-[/muted]",
         )
 
     console.print(table)
-    console.print(f"\nAll assets saved to: [cyan]{out_dir}[/cyan]")
-    console.print(f"Manifest: [dim]{manifest_path}[/dim]")
+    console.print()
+    success(f"All assets saved to: [highlight]{out_dir}[/highlight]")
+    info(f"Manifest: [path]{manifest_path}[/path]")
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +275,7 @@ def flywheel_copy(
     script_path = Path(script_file)
 
     if not script_path.exists():
-        err_console.print(f"[red]Error:[/red] Script not found: {script_file}")
+        error(f"Script not found: {script_file}")
         raise typer.Exit(1)
 
     script = json.loads(script_path.read_text(encoding="utf-8"))
@@ -284,7 +295,7 @@ def flywheel_copy(
     from vidmation.services.repurpose import create_repurposer
     from vidmation.config.profiles import get_default_profile
 
-    with console.status("[cyan]Generating social media copy...[/cyan]"):
+    with spinner("Generating social media copy..."):
         repurposer = create_repurposer(settings=settings)
         results = repurposer.generate(
             script=script,
@@ -296,7 +307,7 @@ def flywheel_copy(
 
     if output:
         Path(output).write_text(output_json, encoding="utf-8")
-        console.print(f"[green]Social copy saved to {output}[/green]")
+        success(f"Social copy saved to [path]{output}[/path]")
     else:
         console.print_json(output_json)
 
@@ -313,8 +324,8 @@ def flywheel_platforms() -> None:
     exporter = MultiPlatformExporter()
     platforms = exporter.get_supported_platforms()
 
-    table = Table(title="Supported Platforms", show_lines=True)
-    table.add_column("Platform", style="cyan")
+    table = styled_table("Supported Platforms", show_lines=True)
+    table.add_column("Platform", style="highlight")
     table.add_column("Resolution")
     table.add_column("Max Duration")
     table.add_column("Video", justify="center")
@@ -338,8 +349,8 @@ def flywheel_platforms() -> None:
             p,
             res,
             dur,
-            "[green]Yes[/green]" if has_video else "[dim]-[/dim]",
-            "[green]Yes[/green]" if has_copy else "[dim]-[/dim]",
+            "[success]Yes[/success]" if has_video else "[muted]-[/muted]",
+            "[success]Yes[/success]" if has_copy else "[muted]-[/muted]",
         )
 
     console.print(table)

@@ -5,27 +5,13 @@ from __future__ import annotations
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
+from vidmation.cli.theme import console, err, error, success, warning, styled_table, status_badge, result_panel, spinner, header
 from vidmation.db.engine import get_session, init_db
 from vidmation.db.repos import JobRepo, VideoRepo
 from vidmation.models.job import JobStatus
 
-console = Console()
-err_console = Console(stderr=True)
-
 job_app = typer.Typer(no_args_is_help=True)
-
-# Status badge colours
-_STATUS_STYLES = {
-    JobStatus.QUEUED: "[yellow]QUEUED[/yellow]",
-    JobStatus.RUNNING: "[blue]RUNNING[/blue]",
-    JobStatus.COMPLETED: "[green]COMPLETED[/green]",
-    JobStatus.FAILED: "[red]FAILED[/red]",
-    JobStatus.CANCELLED: "[dim]CANCELLED[/dim]",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -48,10 +34,10 @@ def job_list(
     session.close()
 
     if not jobs:
-        console.print("[yellow]No jobs found.[/yellow]")
+        warning("No jobs found.")
         return
 
-    table = Table(title="Jobs", show_lines=True)
+    table = styled_table("Jobs")
     table.add_column("ID", style="dim", max_width=12)
     table.add_column("Type", style="cyan", no_wrap=True)
     table.add_column("Status")
@@ -64,7 +50,7 @@ def job_list(
         table.add_row(
             job.id[:12] + "...",
             job.job_type.value,
-            _STATUS_STYLES.get(job.status, str(job.status.value)),
+            status_badge(job.status.value),
             job.current_stage or "-",
             f"{job.progress_pct}%",
             job.video_id[:12] + "..." if job.video_id else "-",
@@ -90,7 +76,7 @@ def job_status(
     job = job_repo.get(job_id)
 
     if job is None:
-        err_console.print(f"[red]Error:[/red] Job '{job_id}' not found.")
+        error(f"Job '{job_id}' not found.")
         session.close()
         raise typer.Exit(1)
 
@@ -99,36 +85,32 @@ def job_status(
     video = video_repo.get(job.video_id) if job.video_id else None
     session.close()
 
-    status_badge = _STATUS_STYLES.get(job.status, str(job.status.value))
+    badge = status_badge(job.status.value)
 
-    lines = [
-        f"[bold]Job ID:[/bold]        {job.id}",
-        f"[bold]Type:[/bold]          {job.job_type.value}",
-        f"[bold]Status:[/bold]        {status_badge}",
-        f"[bold]Current Stage:[/bold] {job.current_stage or '-'}",
-        f"[bold]Progress:[/bold]      {job.progress_pct}%",
-        f"[bold]Resume From:[/bold]   {job.resume_from_stage or '-'}",
-        "",
-        f"[bold]Created:[/bold]       {job.created_at or '-'}",
-        f"[bold]Started:[/bold]       {job.started_at or '-'}",
-        f"[bold]Completed:[/bold]     {job.completed_at or '-'}",
+    rows = [
+        ("Job ID:", job.id),
+        ("Type:", job.job_type.value),
+        ("Status:", badge),
+        ("Current Stage:", job.current_stage or "-"),
+        ("Progress:", f"{job.progress_pct}%"),
+        ("Resume From:", job.resume_from_stage or "-"),
+        ("Created:", str(job.created_at or "-")),
+        ("Started:", str(job.started_at or "-")),
+        ("Completed:", str(job.completed_at or "-")),
     ]
 
     if job.error_detail:
-        lines.append("")
-        lines.append(f"[bold red]Error:[/bold red]")
-        lines.append(f"  {job.error_detail}")
+        rows.append(("[error]Error:[/error]", job.error_detail))
 
     if video:
-        lines.append("")
-        lines.append(f"[bold]Video ID:[/bold]     {video.id}")
-        lines.append(f"[bold]Topic:[/bold]        {video.topic_prompt}")
-        lines.append(f"[bold]Title:[/bold]        {video.title or '-'}")
-        lines.append(f"[bold]Video Status:[/bold] {video.status.value}")
+        rows.append(("Video ID:", video.id))
+        rows.append(("Topic:", video.topic_prompt))
+        rows.append(("Title:", video.title or "-"))
+        rows.append(("Video Status:", video.status.value))
         if video.file_path:
-            lines.append(f"[bold]File:[/bold]         {video.file_path}")
+            rows.append(("File:", video.file_path))
 
-    console.print(Panel("\n".join(lines), title=f"Job {job.id[:12]}..."))
+    console.print(result_panel(f"Job {job.id[:12]}...", rows))
 
 
 # ---------------------------------------------------------------------------
@@ -151,14 +133,12 @@ def job_cancel(
     job = repo.get(job_id)
 
     if job is None:
-        err_console.print(f"[red]Error:[/red] Job '{job_id}' not found.")
+        error(f"Job '{job_id}' not found.")
         session.close()
         raise typer.Exit(1)
 
     if job.status not in (JobStatus.QUEUED, JobStatus.RUNNING):
-        err_console.print(
-            f"[red]Error:[/red] Job is already {job.status.value} — cannot cancel."
-        )
+        error(f"Job is already {job.status.value} — cannot cancel.")
         session.close()
         raise typer.Exit(1)
 
@@ -166,7 +146,7 @@ def job_cancel(
     session.commit()
     session.close()
 
-    console.print(f"[green]Job {job_id[:12]}... cancelled.[/green]")
+    success(f"Job {job_id[:12]}... cancelled.")
 
 
 # ---------------------------------------------------------------------------
@@ -192,13 +172,14 @@ def job_retry(
     try:
         new_job = enqueue_retry(job_id=job_id, resume_from=stage)
     except ValueError as exc:
-        err_console.print(f"[red]Error:[/red] {exc}")
+        error(str(exc))
         raise typer.Exit(1)
 
-    console.print(Panel.fit(
-        f"[green]Retry job created![/green]\n\n"
-        f"  New Job ID:    [cyan]{new_job.id}[/cyan]\n"
-        f"  Resume From:   {new_job.resume_from_stage or 'beginning'}\n\n"
-        f"Track with: [bold]vidmation job status {new_job.id}[/bold]",
-        title="Retry",
+    console.print(result_panel(
+        "Retry job created!",
+        [
+            ("New Job ID:", f"[cyan]{new_job.id}[/cyan]"),
+            ("Resume From:", new_job.resume_from_stage or "beginning"),
+            ("Track with:", f"[bold]vidmation job status {new_job.id}[/bold]"),
+        ],
     ))
