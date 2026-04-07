@@ -233,12 +233,89 @@ def stage_ai_video_generation(ctx: PipelineContext, settings: Settings) -> None:
 # 4b. Media sourcing (stock video/images per script section)
 # ---------------------------------------------------------------------------
 
+def _build_query_variations(section: dict, max_queries: int = 3) -> list[str]:
+    """Generate 2-3 search query variations for a single script section.
+
+    Real faceless YouTube videos cut between visuals every 3-5 seconds, so
+    we need multiple clips per section.  Different query phrasings avoid
+    getting near-duplicate results from the stock provider.
+
+    The first query is always the section's ``visual_query`` (authored by
+    the script generator).  Additional queries are derived from the section
+    ``heading`` and keywords extracted from the ``narration``.
+    """
+    queries: list[str] = []
+
+    # 1. Primary query — always the visual_query from the script
+    primary = section.get("visual_query", "").strip()
+    if primary:
+        queries.append(primary)
+
+    # 2. Heading-based variation (if it differs from the primary)
+    heading = section.get("heading", "").strip()
+    if heading and heading.lower() != primary.lower():
+        queries.append(heading)
+
+    # 3. Keywords from the narration text — pick a few content words
+    if len(queries) < max_queries:
+        narration = section.get("narration", section.get("text", ""))
+        if narration:
+            # Simple keyword extraction: take longer words, skip stop words
+            _stop = {
+                "the", "a", "an", "is", "are", "was", "were", "be", "been",
+                "being", "have", "has", "had", "do", "does", "did", "will",
+                "would", "could", "should", "may", "might", "can", "shall",
+                "to", "of", "in", "for", "on", "with", "at", "by", "from",
+                "as", "into", "through", "during", "before", "after", "and",
+                "but", "or", "nor", "not", "so", "yet", "both", "either",
+                "neither", "this", "that", "these", "those", "it", "its",
+                "they", "them", "their", "we", "our", "you", "your", "he",
+                "she", "his", "her", "who", "which", "what", "where", "when",
+                "how", "all", "each", "every", "any", "few", "more", "most",
+                "some", "such", "than", "too", "very", "just", "about",
+            }
+            words = [
+                w.strip(".,;:!?\"'()-")
+                for w in narration.split()
+                if len(w) > 4 and w.lower().strip(".,;:!?\"'()-") not in _stop
+            ]
+            # Pick 3-4 unique content words for a keyword query
+            seen: set[str] = set()
+            keywords: list[str] = []
+            for w in words:
+                lower = w.lower()
+                if lower not in seen:
+                    seen.add(lower)
+                    keywords.append(w)
+                if len(keywords) >= 4:
+                    break
+            if keywords:
+                queries.append(" ".join(keywords))
+
+    # Ensure at least 1 query even if visual_query was empty
+    if not queries:
+        fallback = section.get("heading", section.get("narration", "stock footage")[:60])
+        queries.append(fallback)
+
+    return queries[:max_queries]
+
+
 def stage_media_sourcing(ctx: PipelineContext, settings: Settings) -> None:
-    """Download stock media or generate AI images for each script section.
+    """Download stock media for each script section — multiple clips per section.
+
+    For each section, this stage downloads 3-6 clips (a mix of videos and
+    images) using varied search queries derived from the section's
+    ``visual_query``, ``heading``, and ``narration`` keywords.  This produces
+    the visual variety needed for faceless YouTube videos where the visuals
+    should cut every 3-5 seconds.
 
     If ``stage_ai_video_generation`` has already run (in ``"ai"`` or
     ``"mixed"`` mode), this stage will skip sections that already have
     AI-generated clips and only source stock media for the remaining ones.
+
+    The resulting ``ctx.media_clips`` entries contain both:
+    - ``"path"``  — the first clip (backward-compatible single path)
+    - ``"paths"`` — a list of all clip paths for multi-clip assembly
     """
     from vidmation.services.media import create_media_provider
 
@@ -268,7 +345,7 @@ def stage_media_sourcing(ctx: PipelineContext, settings: Settings) -> None:
         return
 
     logger.info(
-        "[media] Sourcing stock media for %d/%d sections",
+        "[media] Sourcing multi-clip stock media for %d/%d sections",
         len(sections_needing_stock),
         len(sections),
     )
@@ -277,34 +354,54 @@ def stage_media_sourcing(ctx: PipelineContext, settings: Settings) -> None:
     clips: list[dict] = list(ctx.media_clips or [])
     existing_indices = {c["section_index"] for c in clips}
 
+    # Target 4 clips per section (yields ~3-5 second sub-clips for typical
+    # 15-30 second sections).  The provider may return fewer if results are
+    # scarce.
+    clips_per_section = 4
+
     for section in sections_needing_stock:
         idx = section["section_number"]
         if idx in existing_indices:
             continue
 
-        query = section["visual_query"]
-        visual_type = section["visual_type"]
+        visual_type = section.get("visual_type", "video")
+        queries = _build_query_variations(section)
 
-        logger.info("[media] Section %d: query=%r type=%s", idx, query, visual_type)
+        logger.info(
+            "[media] Section %d: queries=%r type=%s clips_target=%d",
+            idx, queries, visual_type, clips_per_section,
+        )
 
-        result = media_provider.search_and_download(
-            query=query,
+        results = media_provider.search_and_download_multiple(
+            queries=queries,
             media_type=visual_type,
             output_dir=ctx.work_dir / "media",
             section_index=idx,
+            clips_per_section=clips_per_section,
         )
 
+        all_paths = [str(r["path"]) for r in results]
+        sources = list({r.get("source", "unknown") for r in results})
+        attributions = [r.get("attribution", "") for r in results if r.get("attribution")]
+
         clips.append({
-            "path": str(result["path"]),
+            "path": all_paths[0],               # backward compat: first clip
+            "paths": all_paths,                  # NEW: all clips for this section
             "section_index": idx,
             "type": visual_type,
-            "source": result.get("source", "unknown"),
-            "attribution": result.get("attribution", ""),
+            "source": ", ".join(sources),
+            "attribution": "; ".join(attributions),
+            "clip_count": len(all_paths),
         })
 
     ctx.media_clips = sorted(clips, key=lambda c: c["section_index"])
 
-    logger.info("[media] Total media clips after stock sourcing: %d", len(ctx.media_clips))
+    total_clips = sum(c.get("clip_count", 1) for c in ctx.media_clips)
+    logger.info(
+        "[media] Total media entries: %d sections, %d individual clips",
+        len(ctx.media_clips),
+        total_clips,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +432,8 @@ def stage_video_assembly(ctx: PipelineContext, settings: Settings) -> None:
 
     # Merge script sections with media clip paths from ctx.media_clips.
     # The assembler expects each section to have a "media_path" key.
+    # When multi-clip sourcing is active, sections also get "media_paths"
+    # (list of paths) so the assembler can interleave sub-clips.
     sections = ctx.script.get("sections", []) if ctx.script else []
     clip_by_index = {c["section_index"]: c for c in (ctx.media_clips or [])}
 
@@ -347,6 +446,9 @@ def stage_video_assembly(ctx: PipelineContext, settings: Settings) -> None:
             continue
         enriched = dict(sec)
         enriched["media_path"] = clip_info["path"]
+        # Pass multi-clip paths if available
+        if clip_info.get("paths") and len(clip_info["paths"]) > 1:
+            enriched["media_paths"] = clip_info["paths"]
         enriched_sections.append(enriched)
 
     if not enriched_sections:

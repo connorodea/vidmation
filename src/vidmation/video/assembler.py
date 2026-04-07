@@ -2,11 +2,17 @@
 
 Orchestrates clip fitting, transitions, audio mixing, caption burn-in,
 and final encoding into a single cohesive video file.
+
+Supports multi-clip sections: when a section provides ``media_paths``
+(a list of visual assets), the assembler splits the section duration
+into 3-5 second sub-clips and interleaves them -- producing the fast-cut
+visual style typical of faceless YouTube content.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 import random
 from pathlib import Path
 from typing import Any
@@ -20,6 +26,10 @@ from vidmation.video.captions_render import burn_captions, generate_ass_file
 from vidmation.video.formats import FormatSpec, get_format
 
 logger = logging.getLogger(__name__)
+
+# Sub-clip duration bounds for multi-clip sections (seconds)
+_MIN_SUBCLIP_DURATION = 3.0
+_MAX_SUBCLIP_DURATION = 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +201,15 @@ class VideoAssembler:
         # 3. Join clips with transitions
         logger.info("Building visual timeline with transition=%s", self.video_config.transition)
         timeline_path = self._build_timeline(clip_paths, durations)
+
+        # 3b. Burn section titles onto the timeline
+        headings = [sec.get("heading", "") for sec in timed_sections]
+        title_starts = [sec["start"] for sec in timed_sections]
+        if any(headings):
+            logger.info("Burning %d section title overlays", len([h for h in headings if h]))
+            timeline_path = self._burn_section_titles(
+                timeline_path, headings, title_starts, durations,
+            )
 
         # 4. Mix audio
         logger.info("Mixing audio (voiceover + music)")
@@ -558,6 +577,99 @@ class VideoAssembler:
         if style in ("pop_in", "pop-in", "popin"):
             return "pop_in"
         return "none"
+
+    # ------------------------------------------------------------------
+    # Internal: section title overlays
+    # ------------------------------------------------------------------
+
+    def _burn_section_titles(
+        self,
+        video_path: Path,
+        headings: list[str],
+        starts: list[float],
+        durations: list[float],
+    ) -> Path:
+        """Burn section heading titles onto the video using drawtext.
+
+        Each title appears for 3 seconds at the start of its section,
+        fading in over 0.3s and fading out over 0.5s.  Displayed as
+        large bold white text with a dark semi-transparent background box.
+
+        Returns:
+            Path to the video with titles burned in.
+        """
+        import subprocess
+
+        out_path = self.work_dir / "timeline_titled.mp4"
+
+        # Build a chain of drawtext filters — one per section heading
+        # Account for xfade overlaps: accumulate actual start positions
+        transition_dur = 0.5
+        actual_starts: list[float] = [0.0]
+        for i in range(1, len(durations)):
+            actual_starts.append(actual_starts[-1] + durations[i - 1] - transition_dur)
+
+        filters: list[str] = []
+        for i, heading in enumerate(headings):
+            if not heading or not heading.strip():
+                continue
+
+            # Escape text for ffmpeg drawtext
+            safe_text = (
+                heading
+                .replace("\\", "\\\\")
+                .replace("'", "\u2019")  # smart quote
+                .replace(":", "\\:")
+                .replace("%", "%%")
+            )
+
+            t_start = actual_starts[i] if i < len(actual_starts) else starts[i]
+            t_end = t_start + 3.0  # show for 3 seconds
+            fade_in_end = t_start + 0.3
+            fade_out_start = t_end - 0.5
+
+            # drawtext with background box, fade in/out via alpha
+            filters.append(
+                f"drawtext=text='{safe_text}'"
+                f":fontsize=52"
+                f":fontcolor=white"
+                f":fontfile=/System/Library/Fonts/Helvetica.ttc"
+                f":x=(w-text_w)/2"
+                f":y=h*0.15"
+                f":box=1"
+                f":boxcolor=black@0.6"
+                f":boxborderw=20"
+                f":enable='between(t,{t_start:.2f},{t_end:.2f})'"
+                f":alpha='if(lt(t,{fade_in_end:.2f}),(t-{t_start:.2f})/0.3,"
+                f"if(gt(t,{fade_out_start:.2f}),({t_end:.2f}-t)/0.5,1))'"
+            )
+
+        if not filters:
+            return video_path
+
+        filter_chain = ",".join(filters)
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-vf", filter_chain,
+            "-c:v", "libx264",
+            "-crf", "18",
+            "-preset", "fast",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "copy",
+            str(out_path),
+        ]
+
+        logger.info("Burning %d section titles", len(filters))
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning("Title overlay failed, using video without titles: %s",
+                          result.stderr[-300:] if result.stderr else "unknown")
+            return video_path
+
+        logger.info("Section titles burned: %s", out_path)
+        return out_path
 
     # ------------------------------------------------------------------
     # Internal: file copy

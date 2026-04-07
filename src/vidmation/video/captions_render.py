@@ -339,35 +339,40 @@ def _has_ass_filter() -> bool:
 def _burn_captions_ass_filter(
     video_path: Path, ass_path: Path, output_path: Path
 ) -> None:
-    """Burn ASS subtitles using ffmpeg's ``ass`` video filter (requires libass)."""
+    """Burn ASS subtitles using ffmpeg's ``ass`` video filter (requires libass).
+
+    Uses subprocess directly because ffmpeg-python's `.filter("ass", ...)`
+    generates incorrect filter syntax for the ass filter.
+    """
+    import subprocess
+
     abs_ass = str(ass_path.resolve())
-    escaped_ass = (
+    # Escape special chars for the ffmpeg filtergraph
+    escaped = (
         abs_ass
-        .replace("\\", "\\\\\\\\")
+        .replace("\\", "\\\\")
         .replace(":", "\\:")
-        .replace("'", "\\'")
+        .replace("'", "'\\''")
         .replace("[", "\\[")
         .replace("]", "\\]")
     )
-    try:
-        (
-            ffmpeg
-            .input(str(video_path))
-            .filter("ass", filename=escaped_ass)
-            .output(
-                str(output_path),
-                vcodec="libx264",
-                acodec="copy",
-                crf="18",
-                preset="medium",
-                pix_fmt="yuv420p",
-            )
-            .overwrite_output()
-            .run(quiet=True)
-        )
-    except ffmpeg.Error as exc:
-        stderr = exc.stderr.decode(errors="replace") if exc.stderr else "unknown error"
-        raise FFmpegError(f"Caption burn-in failed: {stderr}") from exc
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(video_path),
+        "-vf", f"ass='{escaped}'",
+        "-c:v", "libx264",
+        "-crf", "18",
+        "-preset", "medium",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "copy",
+        str(output_path),
+    ]
+
+    logger.info("Burning captions: %s", " ".join(cmd[-4:]))
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise FFmpegError(f"Caption burn-in failed: {result.stderr[-500:]}")
 
 
 def _copy_without_captions(
