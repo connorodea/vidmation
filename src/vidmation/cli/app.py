@@ -13,6 +13,7 @@ from vidmation.cli.effects import effects_app
 from vidmation.cli.generate import generate_app
 from vidmation.cli.job import job_app
 from vidmation.cli.server import server_app
+from vidmation.cli.youtube import youtube_app
 
 app = typer.Typer(
     name="vidmation",
@@ -31,6 +32,7 @@ app.add_typer(batch_app, name="batch", help="Batch video generation from topics,
 app.add_typer(audio_app, name="audio", help="Audio-first video generation from audio files.")
 app.add_typer(content_app, name="content", help="Content planning, calendars, trending topics, and series.")
 app.add_typer(effects_app, name="effects", help="Post-production effects: zoom, silence removal, B-roll, emoji/SFX, clips.")
+app.add_typer(youtube_app, name="youtube", help="YouTube: setup, upload, schedule, list, update videos.")
 
 # Register top-level worker/serve commands
 from vidmation.cli.server import worker as _worker_cmd, serve as _serve_cmd  # noqa: E402

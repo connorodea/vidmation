@@ -398,7 +398,12 @@ def stage_thumbnail(ctx: PipelineContext, settings: Settings) -> None:
 # ---------------------------------------------------------------------------
 
 def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
-    """Upload the finished video and thumbnail to YouTube."""
+    """Upload the finished video and thumbnail to YouTube.
+
+    Uses AI-generated metadata (title, description with chapters, tags)
+    when available, and uploads companion SRT captions if present.
+    Supports scheduled publishing via the channel profile.
+    """
     from vidmation.services.youtube.auth import get_credentials
     from vidmation.services.youtube.uploader import YouTubeUploader
 
@@ -409,29 +414,94 @@ def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
 
     logger.info("[upload] Uploading video to YouTube")
 
-    # Resolve OAuth credentials from disk (token cached next to work_dir)
+    # Resolve OAuth credentials
     token_path = settings.data_dir / "youtube_token.json"
     client_secret_path = settings.data_dir / "client_secret.json"
+
+    if not token_path.exists():
+        logger.warning(
+            "[upload] YouTube token not found at %s — skipping upload. "
+            "Run 'vidmation youtube setup' to configure.",
+            token_path,
+        )
+        return
+
     credentials = get_credentials(
         token_path=token_path,
         client_secret_path=client_secret_path,
     )
 
     uploader = YouTubeUploader(credentials=credentials)
-
     yt_config = ctx.channel_profile.youtube
 
-    video_id = uploader.upload(
-        video_path=ctx.final_video_path,
-        title=ctx.script.get("title", ctx.topic),
-        description=ctx.script.get("description", ""),
-        tags=ctx.script.get("tags", []),
-        category_id=yt_config.category_id,
-        visibility=yt_config.visibility,
-        thumbnail_path=ctx.thumbnail_path,
-    )
+    # Generate AI-optimized metadata
+    title = ctx.script.get("title", ctx.topic)
+    description = ctx.script.get("description", "")
+    tags = ctx.script.get("tags", [])
+
+    try:
+        from vidmation.services.youtube.metadata import YouTubeMetadataGenerator
+
+        meta_gen = YouTubeMetadataGenerator(settings=settings)
+        metadata = meta_gen.generate(
+            script=ctx.script,
+            channel_profile=ctx.channel_profile,
+        )
+        title = metadata.get("title", title)
+        description = metadata.get("description", description)
+        tags = metadata.get("tags", tags)
+        logger.info("[upload] AI metadata generated: title=%r", title)
+    except Exception as exc:
+        logger.warning("[upload] AI metadata generation failed (%s), using script defaults", exc)
+
+    # Parse schedule from profile
+    publish_at = None
+    if yt_config.schedule:
+        try:
+            from vidmation.cli.youtube import _parse_schedule
+
+            publish_at = _parse_schedule(yt_config.schedule)
+            logger.info("[upload] Scheduled publish at %s", publish_at.isoformat())
+        except Exception as exc:
+            logger.warning("[upload] Could not parse schedule %r: %s", yt_config.schedule, exc)
+
+    # Upload video
+    if publish_at:
+        video_id = uploader.upload_with_schedule(
+            video_path=ctx.final_video_path,
+            title=title,
+            description=description,
+            tags=tags,
+            category_id=yt_config.category_id,
+            thumbnail_path=ctx.thumbnail_path,
+            publish_at=publish_at,
+        )
+    else:
+        video_id = uploader.upload(
+            video_path=ctx.final_video_path,
+            title=title,
+            description=description,
+            tags=tags,
+            category_id=yt_config.category_id,
+            visibility=yt_config.visibility,
+            thumbnail_path=ctx.thumbnail_path,
+        )
 
     logger.info("[upload] Uploaded — YouTube video_id=%s", video_id)
+
+    # Upload SRT captions if available
+    srt_path = ctx.final_video_path.with_suffix(".srt")
+    if srt_path.exists():
+        try:
+            uploader.upload_captions(
+                video_id=video_id,
+                srt_path=srt_path,
+                language=yt_config.default_language,
+                name="Auto-generated",
+            )
+            logger.info("[upload] Captions uploaded from %s", srt_path.name)
+        except Exception as exc:
+            logger.warning("[upload] Caption upload failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
