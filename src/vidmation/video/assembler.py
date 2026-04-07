@@ -176,7 +176,17 @@ class VideoAssembler:
                 clip_path = self._render_fitted_clip(media_path, sec_dur, idx)
 
             clip_paths.append(clip_path)
-            durations.append(sec_dur)
+
+            # Use the ACTUAL rendered duration, not the target, so xfade
+            # offsets are accurate.  Rendered clips may differ from the
+            # target due to trimming, speed changes, or Ken Burns rounding.
+            actual_dur = get_duration(clip_path)
+            durations.append(actual_dur)
+            if abs(actual_dur - sec_dur) > 0.5:
+                logger.warning(
+                    "Section %d: rendered %.2fs vs target %.2fs (delta %.2fs)",
+                    idx + 1, actual_dur, sec_dur, actual_dur - sec_dur,
+                )
 
         # 3. Join clips with transitions
         logger.info("Building visual timeline with transition=%s", self.video_config.transition)

@@ -25,7 +25,7 @@ class VideoConfig:
     resolution: str = "1920x1080"
     target_duration_min: int = 480
     target_duration_max: int = 900
-    transition: str = "fade_black"
+    transition: str = "crossfade"
     caption_style: str = "bold_centered"
     caption_font: str = "Montserrat-Bold"
     caption_color: str = "#FFFFFF"
