@@ -20,6 +20,7 @@ from vidmation.cli.theme import (
     spinner,
     pipeline_progress,
     kv,
+    styled_table,
 )
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
@@ -30,6 +31,59 @@ generate_app = typer.Typer(no_args_is_help=True)
 
 
 # ---------------------------------------------------------------------------
+# vidmation generate styles  (list available video style templates)
+# ---------------------------------------------------------------------------
+
+@generate_app.command("styles")
+def list_style_templates() -> None:
+    """List all built-in video style templates.
+
+    Each template defines a complete visual identity: caption style,
+    transitions, music genre, thumbnail style, accent colour, and title
+    placement.  Use ``--style <slug>`` with ``vidmation generate video``
+    to apply a template.
+    """
+    from vidmation.styles.registry import list_templates
+
+    templates = list_templates()
+
+    if not templates:
+        warning("No video style templates found.")
+        raise typer.Exit()
+
+    console.print(header("Video Style Templates"))
+    console.print()
+
+    table = styled_table()
+    table.add_column("Slug", style="bold bright_green", no_wrap=True)
+    table.add_column("Name", style="bold white")
+    table.add_column("Transition", style="dim")
+    table.add_column("Music", style="dim")
+    table.add_column("Accent", style="dim")
+    table.add_column("Description")
+
+    for t in templates:
+        # Show the accent colour as a coloured block if possible
+        accent = t["color_accent"]
+        table.add_row(
+            t["slug"],
+            t["name"],
+            t["transition"],
+            t["music_genre"],
+            f"[{accent}]{accent}[/{accent}]",
+            t["description"],
+        )
+
+    console.print(table)
+    console.print()
+    console.print(
+        "  [dim]Tip:[/dim] Use [bold bright_green]vidmation generate video "
+        "--topic \"...\" --style <slug>[/bold bright_green] to apply a template."
+    )
+    console.print()
+
+
+# ---------------------------------------------------------------------------
 # vidmation generate video
 # ---------------------------------------------------------------------------
 
@@ -37,6 +91,7 @@ generate_app = typer.Typer(no_args_is_help=True)
 def generate_video(
     topic: str = typer.Option(..., "--topic", "-t", help="Video topic / prompt."),
     channel: str = typer.Option("default", "--channel", "-c", help="Channel name."),
+    style: Optional[str] = typer.Option(None, "--style", "-s", help="Video style template slug (e.g. dark-cinematic). Run 'vidmation generate styles' to list."),
     format: str = typer.Option("landscape", "--format", "-f", help="Video format: landscape, portrait, short."),
     no_upload: bool = typer.Option(False, "--no-upload", help="Skip YouTube upload stage."),
     run_async: bool = typer.Option(False, "--async", help="Queue the job instead of running synchronously."),
@@ -45,6 +100,10 @@ def generate_video(
 
     By default, runs the full pipeline synchronously with live progress.
     Use --async to queue a job for the background worker instead.
+
+    Use --style / -s to apply a built-in video style template that controls
+    captions, transitions, music genre, thumbnail style, and colour accent.
+    Run ``vidmation generate styles`` to see all available templates.
     """
     from vidmation.utils.logging import setup_logging
 
@@ -54,14 +113,28 @@ def generate_video(
     video_format = VideoFormat(format)
 
     if run_async:
-        _generate_video_async(topic, channel, video_format)
+        _generate_video_async(topic, channel, video_format, style_slug=style)
     else:
-        _generate_video_sync(topic, channel, video_format, no_upload=no_upload)
+        _generate_video_sync(topic, channel, video_format, no_upload=no_upload, style_slug=style)
 
 
-def _generate_video_async(topic: str, channel: str, video_format: VideoFormat) -> None:
+def _generate_video_async(
+    topic: str,
+    channel: str,
+    video_format: VideoFormat,
+    *,
+    style_slug: str | None = None,
+) -> None:
     """Enqueue a video generation job."""
     from vidmation.queue.tasks import enqueue_video
+
+    if style_slug:
+        from vidmation.styles.registry import get_template
+        try:
+            get_template(style_slug)  # validate slug exists
+        except ValueError as exc:
+            error(str(exc))
+            raise typer.Exit(1)
 
     try:
         video, job = enqueue_video(
@@ -73,14 +146,15 @@ def _generate_video_async(topic: str, channel: str, video_format: VideoFormat) -
         error(str(exc))
         raise typer.Exit(1)
 
-    console.print(result_panel(
-        "Job queued successfully!",
-        [
-            ("Video ID:", f"[id]{video.id}[/id]"),
-            ("Job ID:", f"[id]{job.id}[/id]"),
-            ("Track:", f"[bold]vidmation job status {job.id}[/bold]"),
-        ],
-    ))
+    rows = [
+        ("Video ID:", f"[id]{video.id}[/id]"),
+        ("Job ID:", f"[id]{job.id}[/id]"),
+        ("Track:", f"[bold]vidmation job status {job.id}[/bold]"),
+    ]
+    if style_slug:
+        rows.insert(0, ("Style:", f"[accent]{style_slug}[/accent]"))
+
+    console.print(result_panel("Job queued successfully!", rows))
 
 
 def _generate_video_sync(
@@ -89,6 +163,7 @@ def _generate_video_sync(
     video_format: VideoFormat,
     *,
     no_upload: bool,
+    style_slug: str | None = None,
 ) -> None:
     """Run the full pipeline synchronously with Rich progress output."""
     import uuid
@@ -120,6 +195,17 @@ def _generate_video_sync(
     except FileNotFoundError:
         profile = get_default_profile()
 
+    # Apply video style template if provided
+    if style_slug:
+        from vidmation.styles.registry import apply_template
+
+        try:
+            profile = apply_template(profile, style_slug)
+        except ValueError as exc:
+            error(str(exc))
+            session.close()
+            raise typer.Exit(1)
+
     video_id = str(uuid.uuid4())
     work_dir = get_work_dir(video_id)
 
@@ -141,6 +227,8 @@ def _generate_video_sync(
     console.print(header("Pipeline Starting"))
     kv("Topic:", topic)
     kv("Channel:", channel)
+    if style_slug:
+        kv("Style:", f"[accent]{style_slug}[/accent]")
     kv("Format:", video_format.value)
     kv("Video ID:", f"[id]{video_id}[/id]")
     kv("Stages:", str(len(stages)))

@@ -23,11 +23,13 @@ import {
   PanelLeftClose,
   PanelLeft,
   Plus,
+  Palette,
 } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Videos", href: "/videos", icon: Video },
+  { label: "Templates", href: "/templates", icon: Palette },
   { label: "Channels", href: "/channels", icon: Tv2 },
   { label: "Jobs", href: "/jobs", icon: Cog },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },

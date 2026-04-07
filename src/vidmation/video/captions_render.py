@@ -197,6 +197,40 @@ STYLE_PRESETS: dict[str, dict] = {
         "bold": True,
         "shadow": 2,
     },
+    "highlight": {
+        "font_name": "Montserrat-Bold",
+        "font_size": 64,
+        "primary_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 4,
+        "alignment": 5,
+        "margin_v": 50,
+        "bold": True,
+        "shadow": 3,
+        "highlight_color": "#10A37F",  # bright green accent for active word
+    },
+    "tiktok": {
+        "font_name": "Montserrat-ExtraBold",
+        "font_size": 72,
+        "primary_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 5,
+        "alignment": 5,
+        "margin_v": 50,
+        "bold": True,
+        "shadow": 3,
+    },
+    "minimal": {
+        "font_name": "Helvetica",
+        "font_size": 36,
+        "primary_color": "#FFFFFF",
+        "outline_color": "#333333",
+        "outline_width": 1,
+        "alignment": 1,  # bottom-left
+        "margin_v": 40,
+        "bold": False,
+        "shadow": 0,
+    },
 }
 
 
@@ -258,6 +292,138 @@ def _events_pop_in(chunks: list[dict]) -> list[str]:
     return lines
 
 
+def _events_highlight(
+    chunks: list[dict],
+    highlight_color: str = "#10A37F",
+) -> list[str]:
+    """Word-by-word highlight -- each word lights up in *highlight_color* as
+    it is spoken, then returns to the base (white) colour.
+
+    Uses ASS ``\\kf`` tags with per-word timing.  The active word is rendered
+    in the bright accent colour while all other words stay white.  This
+    produces a Submagic-style "follow the bouncing ball" reading experience.
+    """
+    ass_highlight = _hex_to_ass_color(highlight_color)
+    ass_base = _hex_to_ass_color("#FFFFFF")
+    lines: list[str] = []
+
+    for chunk in chunks:
+        start = _ass_timestamp(chunk["start"])
+        end = _ass_timestamp(chunk["end"])
+        words = chunk["words"]
+        chunk_duration = chunk["end"] - chunk["start"]
+
+        # For each word in the chunk, we generate a separate Dialogue event
+        # that shows the full chunk text but with only the current word
+        # coloured in the highlight colour.
+        for wi, active_word in enumerate(words):
+            w_start = _ass_timestamp(active_word["start"])
+            w_end = _ass_timestamp(active_word["end"])
+            parts: list[str] = []
+
+            for wj, w in enumerate(words):
+                if wj == wi:
+                    # Active word: bright accent colour with smooth kf fill
+                    dur_cs = max(1, int(round((w["end"] - w["start"]) * 100)))
+                    parts.append(
+                        f"{{\\c{ass_highlight}\\kf{dur_cs}}}{w['word']}{{\\r}}"
+                    )
+                else:
+                    # Inactive word: base (white) colour
+                    parts.append(f"{{\\c{ass_base}}}{w['word']}{{\\r}}")
+
+            text = " ".join(parts)
+            lines.append(
+                f"Dialogue: 0,{w_start},{w_end},Default,,0,0,0,,{text}"
+            )
+
+    return lines
+
+
+def _events_bounce(chunks: list[dict]) -> list[str]:
+    """Bounce/scale pop -- each chunk pops in with a scale overshoot effect.
+
+    Scales to 120% then settles to 100% over ~150ms using ASS ``\\t``
+    transform tags with ``\\fscx`` and ``\\fscy``.  This creates a satisfying
+    "punch in" feel similar to Submagic's bounce preset.
+    """
+    lines: list[str] = []
+    for chunk in chunks:
+        start = _ass_timestamp(chunk["start"])
+        end = _ass_timestamp(chunk["end"])
+        text = chunk["text"].replace("\n", "\\N")
+        # Phase 1 (0-80ms): scale from 0% to 120% overshoot
+        # Phase 2 (80-150ms): settle from 120% to 100%
+        bounce = (
+            "{\\fscx0\\fscy0"
+            "\\t(0,80,\\fscx120\\fscy120)"
+            "\\t(80,150,\\fscx100\\fscy100)}"
+        )
+        lines.append(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{bounce}{text}")
+    return lines
+
+
+def _events_glow(chunks: list[dict]) -> list[str]:
+    """Glow effect -- words appear with a bright glow/shadow that fades.
+
+    Uses ASS shadow/border tags that animate from heavy (shadow=8, bord=6)
+    to normal (shadow=2, bord=2) over 300ms.  This creates a luminous bloom
+    on each chunk that settles into a clean readable state.
+    """
+    lines: list[str] = []
+    for chunk in chunks:
+        start = _ass_timestamp(chunk["start"])
+        end = _ass_timestamp(chunk["end"])
+        text = chunk["text"].replace("\n", "\\N")
+        # Start with intense glow (large shadow + border + blur), then
+        # transition to normal rendering over 300ms
+        glow_effect = (
+            "{\\shad8\\bord6\\blur4"
+            "\\t(0,300,\\shad2\\bord2\\blur0)}"
+        )
+        lines.append(
+            f"Dialogue: 0,{start},{end},Default,,0,0,0,,{glow_effect}{text}"
+        )
+    return lines
+
+
+def _events_typewriter(chunks: list[dict], char_delay_ms: int = 40) -> list[str]:
+    """Typewriter -- characters appear one by one from left.
+
+    Each character fades in sequentially using per-character ``\\kf`` timing.
+    Spaces are passed through without consuming a timing slot, so the reveal
+    progresses smoothly across multi-word chunks.
+    """
+    lines: list[str] = []
+    for chunk in chunks:
+        start = _ass_timestamp(chunk["start"])
+        end = _ass_timestamp(chunk["end"])
+        full_text = chunk["text"]
+
+        # Calculate per-character timing based on chunk duration
+        char_count = sum(1 for c in full_text if c != " ")
+        if char_count == 0:
+            continue
+        chunk_duration_cs = max(1, int(round((chunk["end"] - chunk["start"]) * 100)))
+        # Distribute the chunk duration evenly across characters, but cap at
+        # char_delay_ms converted to centiseconds so it doesn't drag
+        per_char_cs = min(
+            max(1, chunk_duration_cs // char_count),
+            max(1, int(char_delay_ms / 10)),
+        )
+
+        parts: list[str] = []
+        for char in full_text:
+            if char == " ":
+                parts.append(" ")
+            else:
+                parts.append(f"{{\\kf{per_char_cs}}}{char}")
+
+        text = "".join(parts)
+        lines.append(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}")
+    return lines
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -274,9 +440,13 @@ def generate_ass_file(
         words: List of dicts with ``word`` (str), ``start`` (float), ``end`` (float).
         output_path: Where to write the ``.ass`` file.
         style: A style preset name (``"bold_centered"``, ``"subtitle_bottom"``,
-            ``"karaoke"``), a custom style dict, or ``None`` for the default.
-        animation: ``"none"`` for plain text, ``"karaoke"`` for word-by-word
-            highlight, ``"pop_in"`` for scale animation.
+            ``"karaoke"``, ``"highlight"``, ``"tiktok"``, ``"minimal"``),
+            a custom style dict, or ``None`` for the default.
+        animation: ``"none"`` for plain text, ``"karaoke"`` for progressive
+            fill, ``"pop_in"`` for scale animation, ``"highlight"`` for
+            word-by-word colour highlight, ``"bounce"`` for scale overshoot
+            pop-in, ``"glow"`` for bloom-to-settle shadow animation,
+            ``"typewriter"`` for per-character sequential reveal.
 
     Returns:
         The *output_path* that was written to.
@@ -308,6 +478,15 @@ def generate_ass_file(
         events = _events_karaoke(chunks)
     elif animation_key in ("pop_in", "pop-in", "popin"):
         events = _events_pop_in(chunks)
+    elif animation_key in ("highlight",):
+        highlight_color = resolved_style.get("highlight_color", "#10A37F")
+        events = _events_highlight(chunks, highlight_color=highlight_color)
+    elif animation_key in ("bounce",):
+        events = _events_bounce(chunks)
+    elif animation_key in ("glow",):
+        events = _events_glow(chunks)
+    elif animation_key in ("typewriter",):
+        events = _events_typewriter(chunks)
     else:
         events = _events_simple(chunks)
 
