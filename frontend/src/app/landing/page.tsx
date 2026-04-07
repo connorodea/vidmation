@@ -5,22 +5,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
-  Mic,
-  Image,
-  Search,
-  Layers,
-  Share2,
-  ChevronDown,
-  ChevronRight,
-  Play,
-  Check,
-  ArrowRight,
   Palette,
-  Film,
-  Clapperboard,
-  Users,
-  Zap,
+  Upload,
+  Play,
+  ArrowRight,
+  ChevronDown,
+  Check,
 } from "lucide-react";
+import { HeroVisual } from "./components/hero-visual";
+import { BentoGrid } from "./components/bento-grid";
+import { StyleShowcase } from "./components/style-showcase";
+import { PricingSection } from "./components/pricing-card";
 
 /* ==========================================================================
    Hero Section
@@ -29,98 +24,104 @@ import {
 function HeroSection() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-16">
-      {/* Gradient mesh background */}
+      {/* Background effects */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/4 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#10a37f]/[0.07] blur-[120px]" />
-        <div className="absolute right-1/4 top-1/2 h-[400px] w-[400px] rounded-full bg-[#10a37f]/[0.04] blur-[100px]" />
+        {/* Radial green glow */}
+        <div className="hero-glow absolute inset-0" />
+        {/* Dot grid pattern */}
+        <div className="dot-pattern absolute inset-0" />
+        {/* Secondary glow */}
+        <div className="absolute right-1/4 top-1/3 h-[500px] w-[500px] rounded-full bg-[#10a37f]/[0.03] blur-[120px]" />
+        {/* Bottom fade line */}
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-[800px] text-center">
         {/* Badge */}
-        <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5">
-          <Zap className="h-3.5 w-3.5 text-[#10a37f]" />
-          <span className="text-xs font-medium text-[#999]">
-            Now with batch production -- 10 videos at once
+        <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 backdrop-blur-sm">
+          <div className="h-1.5 w-1.5 rounded-full bg-[#10a37f] animate-pulse-dot" />
+          <span className="text-xs font-medium text-[#a1a1a1]">
+            Now with batch production -- create 10 videos at once
           </span>
         </div>
 
         {/* Heading */}
-        <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-[#ececec] sm:text-5xl md:text-6xl lg:text-[64px]">
-          Create Faceless YouTube
+        <h1 className="text-4xl font-bold leading-[1.08] tracking-[-0.02em] text-[#fafafa] sm:text-5xl md:text-6xl lg:text-[72px]">
+          Create YouTube Videos
           <br />
-          Videos with{" "}
-          <span className="bg-gradient-to-r from-[#10a37f] to-[#10a37f]/70 bg-clip-text text-transparent">
-            AI
-          </span>
+          <span className="gradient-text">with AI</span> in Minutes
         </h1>
 
         {/* Subheading */}
-        <p className="mx-auto mt-6 max-w-[560px] text-base leading-relaxed text-[#999] sm:text-lg">
-          From topic to published video in minutes. AI writes, narrates, and
-          produces professional videos for your YouTube channel.
+        <p className="mx-auto mt-6 max-w-[580px] text-base leading-relaxed text-[#a1a1a1] sm:text-[17px]">
+          From topic to published video. AI writes the script, generates
+          visuals, adds voiceover, and produces a complete faceless YouTube
+          video — ready to upload.
         </p>
 
         {/* CTA Buttons */}
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Button size="lg" className="w-full sm:w-auto px-8 text-[15px]" asChild>
-            <Link href="/signup">
-              Start Free
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full sm:w-auto px-8 text-[15px]"
-            asChild
+          <Link
+            href="/signup"
+            className="glow-green-button inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#10a37f] px-8 text-[15px] font-semibold text-white transition-all duration-150 hover:bg-[#0d8c6d] active:scale-[0.98] sm:w-auto"
           >
-            <a href="#demo">
-              <Play className="mr-1 h-4 w-4" />
-              Watch Demo
-            </a>
-          </Button>
+            Start Creating Free
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <a
+            href="#demo"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-white/[0.1] px-8 text-[15px] font-medium text-[#fafafa] transition-all duration-150 hover:border-white/[0.2] hover:bg-white/[0.03] sm:w-auto"
+          >
+            <Play className="h-4 w-4" />
+            Watch Demo
+          </a>
         </div>
 
-        {/* Subtle stats */}
-        <div className="mt-16 flex items-center justify-center gap-8 text-sm text-[#666]">
+        {/* Trust bar */}
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-[#666]">
           <span>No credit card required</span>
-          <span className="h-3.5 w-px bg-white/[0.1]" />
-          <span>3 free videos/month</span>
-          <span className="hidden h-3.5 w-px bg-white/[0.1] sm:block" />
-          <span className="hidden sm:block">Cancel anytime</span>
+          <span className="hidden h-3 w-px bg-white/[0.08] sm:block" />
+          <span>3 free videos</span>
+          <span className="hidden h-3 w-px bg-white/[0.08] sm:block" />
+          <span>Cancel anytime</span>
         </div>
+
+        {/* Hero Visual / Dashboard Mockup */}
+        <HeroVisual />
       </div>
     </section>
   );
 }
 
 /* ==========================================================================
-   Social Proof Bar
+   Logo / Social Proof Bar
    ========================================================================== */
+
+const NICHE_LABELS = [
+  "Finance",
+  "Tech",
+  "Education",
+  "Health",
+  "Business",
+  "Crypto",
+  "Self-Improvement",
+  "True Crime",
+  "History",
+];
 
 function SocialProofBar() {
   return (
-    <section className="border-y border-white/[0.06] bg-white/[0.02] py-12">
+    <section className="border-y border-white/[0.06] bg-white/[0.01] py-12 sm:py-16">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="flex flex-col items-center gap-8">
-          <div className="flex items-center gap-3">
-            <Users className="h-4 w-4 text-[#10a37f]" />
-            <p className="text-sm font-medium text-[#999]">
-              Trusted by 1,000+ creators producing 50,000+ videos
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
-            {[
-              "YouTube Creators",
-              "Marketing Agencies",
-              "Content Studios",
-              "Educators",
-              "SaaS Companies",
-            ].map((label) => (
+          <p className="text-sm font-medium text-[#666]">
+            Trusted by creators making videos for
+          </p>
+          <div className="hide-scrollbar flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {NICHE_LABELS.map((label) => (
               <span
                 key={label}
-                className="text-xs font-medium uppercase tracking-widest text-[#444]"
+                className="rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-1.5 text-xs font-medium text-[#a1a1a1] transition-colors duration-150 hover:border-white/[0.1] hover:text-[#fafafa]"
               >
                 {label}
               </span>
@@ -139,391 +140,68 @@ function SocialProofBar() {
 const STEPS = [
   {
     number: "01",
-    title: "Enter your topic",
+    title: "Describe your video",
     description:
-      "Type a topic or paste a URL. Our AI researches, outlines, and writes a complete video script with hooks, transitions, and CTAs.",
+      "Enter any topic. AI generates a complete script with sections, hooks, and calls-to-action optimized for retention.",
     icon: Sparkles,
   },
   {
     number: "02",
     title: "Choose your style",
     description:
-      "Select from oil paintings, stock footage, or AI-generated cinematic visuals. Pick a voice from 35+ professional narrators.",
+      "Pick from 10 visual styles — oil paintings, cinematic, anime, and more. AI creates matching visuals for every scene.",
     icon: Palette,
   },
   {
     number: "03",
-    title: "Publish to YouTube",
+    title: "Export & publish",
     description:
-      "Review your video, make any edits, then auto-upload to YouTube with AI-optimized titles, descriptions, tags, and thumbnails.",
-    icon: Share2,
+      "Download in 1080p or auto-publish to YouTube, TikTok, and Instagram. Complete with SEO-optimized metadata.",
+    icon: Upload,
   },
 ];
 
 function HowItWorksSection() {
   return (
-    <section id="demo" className="py-24 sm:py-32">
+    <section id="how-it-works" className="py-24 sm:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
         {/* Section header */}
         <div className="mx-auto max-w-[600px] text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#10a37f]">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#10a37f]">
             How it works
           </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#ececec] sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#fafafa] sm:text-4xl lg:text-[42px]">
             Three steps to your first video
           </h2>
-          <p className="mt-4 text-base text-[#999]">
+          <p className="mt-4 text-base text-[#a1a1a1] sm:text-lg">
             No editing skills required. No camera needed. Just your ideas.
           </p>
         </div>
 
         {/* Steps */}
-        <div className="mt-16 grid gap-6 sm:gap-8 md:grid-cols-3">
+        <div className="mt-16 grid gap-5 sm:gap-6 md:grid-cols-3">
           {STEPS.map((step) => (
             <div
               key={step.number}
-              className="group relative rounded-2xl border border-white/[0.06] bg-[#1a1a1a]/50 p-8 transition-all duration-200 hover:border-[#10a37f]/20 hover:bg-[#1a1a1a]"
+              className="bento-card group relative rounded-2xl border border-white/[0.06] bg-[#111] p-8"
             >
               {/* Step number */}
-              <span className="text-xs font-mono font-medium text-[#10a37f]">
+              <span className="font-mono text-xs font-semibold text-[#10a37f]">
                 {step.number}
               </span>
 
               {/* Icon */}
-              <div className="mt-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#10a37f]/10">
+              <div className="mt-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#10a37f]/10 transition-colors duration-200 group-hover:bg-[#10a37f]/15">
                 <step.icon className="h-5 w-5 text-[#10a37f]" />
               </div>
 
               {/* Content */}
-              <h3 className="mt-5 text-lg font-semibold text-[#ececec]">
+              <h3 className="mt-5 text-lg font-semibold text-[#fafafa]">
                 {step.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#999]">
+              <p className="mt-2.5 text-sm leading-relaxed text-[#a1a1a1]">
                 {step.description}
               </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ==========================================================================
-   Features Grid
-   ========================================================================== */
-
-const FEATURES = [
-  {
-    icon: Sparkles,
-    title: "AI Script Generation",
-    description:
-      "GPT-4 powered scripts with research, hooks, and narrative structure tailored for YouTube engagement.",
-  },
-  {
-    icon: Mic,
-    title: "Professional Voiceover",
-    description:
-      "35+ ultra-realistic voices across languages and styles. Male, female, and character voices included.",
-  },
-  {
-    icon: Image,
-    title: "Smart Visual Matching",
-    description:
-      "AI selects and times visuals to match your narration. Stock footage, oil paintings, or generated scenes.",
-  },
-  {
-    icon: Search,
-    title: "YouTube-Optimized SEO",
-    description:
-      "Auto-generated titles, descriptions, tags, and thumbnails designed to maximize click-through rate.",
-  },
-  {
-    icon: Layers,
-    title: "Batch Production",
-    description:
-      "Queue up to 10 videos at once. Set topics, styles, and schedules -- then let AI produce overnight.",
-  },
-  {
-    icon: Share2,
-    title: "Multi-Platform Export",
-    description:
-      "Export in YouTube, TikTok, or Instagram formats. Automatic aspect ratio and duration optimization.",
-  },
-];
-
-function FeaturesSection() {
-  return (
-    <section id="features" className="py-24 sm:py-32">
-      <div className="mx-auto max-w-[1200px] px-6">
-        {/* Section header */}
-        <div className="mx-auto max-w-[600px] text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#10a37f]">
-            Features
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#ececec] sm:text-4xl">
-            Everything you need to scale content
-          </h2>
-          <p className="mt-4 text-base text-[#999]">
-            Professional video production, automated from start to finish.
-          </p>
-        </div>
-
-        {/* Grid */}
-        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature) => (
-            <div
-              key={feature.title}
-              className="group rounded-2xl border border-white/[0.06] bg-[#1a1a1a]/50 p-7 transition-all duration-200 hover:border-white/[0.1] hover:bg-[#1a1a1a]"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.05] transition-colors duration-200 group-hover:bg-[#10a37f]/10">
-                <feature.icon className="h-5 w-5 text-[#666] transition-colors duration-200 group-hover:text-[#10a37f]" />
-              </div>
-              <h3 className="mt-5 text-[15px] font-semibold text-[#ececec]">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#999]">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ==========================================================================
-   Style Showcase
-   ========================================================================== */
-
-const STYLES = [
-  {
-    name: "Dark Finance",
-    tag: "Oil Painting",
-    description:
-      "Rich, painterly visuals with dramatic lighting. Perfect for finance, history, and storytelling channels.",
-    icon: Palette,
-    gradient: "from-amber-900/30 to-amber-950/60",
-    accent: "#d97706",
-  },
-  {
-    name: "Stock Footage",
-    tag: "B-Roll",
-    description:
-      "Cinematic stock clips matched to your script. Ideal for explainers, business content, and tutorials.",
-    icon: Film,
-    gradient: "from-blue-900/30 to-blue-950/60",
-    accent: "#3b82f6",
-  },
-  {
-    name: "AI Cinematic",
-    tag: "Generated",
-    description:
-      "AI-generated scenes with cinematic composition. Unique visuals that no stock library can match.",
-    icon: Clapperboard,
-    gradient: "from-purple-900/30 to-purple-950/60",
-    accent: "#8b5cf6",
-  },
-];
-
-function StyleShowcaseSection() {
-  return (
-    <section className="border-t border-white/[0.06] bg-[#111111] py-24 sm:py-32">
-      <div className="mx-auto max-w-[1200px] px-6">
-        {/* Section header */}
-        <div className="mx-auto max-w-[600px] text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#10a37f]">
-            Video Styles
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#ececec] sm:text-4xl">
-            Choose your visual identity
-          </h2>
-          <p className="mt-4 text-base text-[#999]">
-            Three distinct production styles, each optimized for different content niches.
-          </p>
-        </div>
-
-        {/* Style cards */}
-        <div className="mt-16 grid gap-6 md:grid-cols-3">
-          {STYLES.map((style) => (
-            <div
-              key={style.name}
-              className="group overflow-hidden rounded-2xl border border-white/[0.06] bg-[#1a1a1a] transition-all duration-200 hover:border-white/[0.1]"
-            >
-              {/* Visual preview area */}
-              <div
-                className={`relative flex h-48 items-center justify-center bg-gradient-to-br ${style.gradient}`}
-              >
-                <style.icon
-                  className="h-12 w-12 transition-transform duration-300 group-hover:scale-110"
-                  style={{ color: style.accent }}
-                />
-                {/* Tag */}
-                <span
-                  className="absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{
-                    backgroundColor: `${style.accent}20`,
-                    color: style.accent,
-                  }}
-                >
-                  {style.tag}
-                </span>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-[#ececec]">
-                  {style.name}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#999]">
-                  {style.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ==========================================================================
-   Pricing Section
-   ========================================================================== */
-
-const PLANS = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Try AIVidio with no commitment",
-    features: [
-      "3 videos per month",
-      "720p export quality",
-      "AIVidio watermark",
-      "1 video style",
-      "5 voice options",
-      "Community support",
-    ],
-    cta: "Get Started",
-    ctaVariant: "secondary" as const,
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "$29",
-    period: "/month",
-    description: "For creators ready to scale",
-    features: [
-      "30 videos per month",
-      "1080p export quality",
-      "No watermark",
-      "All video styles",
-      "35+ voice options",
-      "Batch mode (10 at once)",
-      "YouTube auto-upload",
-      "Priority rendering",
-    ],
-    cta: "Start Free Trial",
-    ctaVariant: "default" as const,
-    highlight: true,
-  },
-  {
-    name: "Business",
-    price: "$79",
-    period: "/month",
-    description: "For teams and agencies",
-    features: [
-      "Unlimited videos",
-      "4K export quality",
-      "No watermark",
-      "All video styles",
-      "35+ voice options",
-      "API access",
-      "White-label export",
-      "Priority support",
-      "Custom voice cloning",
-      "Team collaboration",
-    ],
-    cta: "Contact Sales",
-    ctaVariant: "secondary" as const,
-    highlight: false,
-  },
-];
-
-function PricingSection() {
-  return (
-    <section id="pricing" className="py-24 sm:py-32">
-      <div className="mx-auto max-w-[1200px] px-6">
-        {/* Section header */}
-        <div className="mx-auto max-w-[600px] text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#10a37f]">
-            Pricing
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#ececec] sm:text-4xl">
-            Simple, transparent pricing
-          </h2>
-          <p className="mt-4 text-base text-[#999]">
-            Start free, upgrade when you need more. No hidden fees.
-          </p>
-        </div>
-
-        {/* Pricing cards */}
-        <div className="mt-16 grid gap-6 md:grid-cols-3">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative flex flex-col rounded-2xl border p-8 transition-all duration-200 ${
-                plan.highlight
-                  ? "border-[#10a37f]/40 bg-[#10a37f]/[0.04]"
-                  : "border-white/[0.06] bg-[#1a1a1a]/50 hover:border-white/[0.1]"
-              }`}
-            >
-              {/* Popular badge */}
-              {plan.highlight && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#10a37f] px-3 py-1 text-[11px] font-semibold text-white">
-                  Most Popular
-                </span>
-              )}
-
-              {/* Plan header */}
-              <div>
-                <h3 className="text-lg font-semibold text-[#ececec]">
-                  {plan.name}
-                </h3>
-                <p className="mt-1 text-sm text-[#999]">{plan.description}</p>
-              </div>
-
-              {/* Price */}
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-[#ececec]">
-                  {plan.price}
-                </span>
-                <span className="text-sm text-[#666]">{plan.period}</span>
-              </div>
-
-              {/* CTA */}
-              <Button
-                variant={plan.ctaVariant}
-                className="mt-6 w-full"
-                asChild
-              >
-                <Link href="/signup">{plan.cta}</Link>
-              </Button>
-
-              {/* Divider */}
-              <div className="my-6 h-px bg-white/[0.06]" />
-
-              {/* Features */}
-              <ul className="flex flex-col gap-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#10a37f]" />
-                    <span className="text-sm text-[#999]">{feature}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           ))}
         </div>
@@ -540,32 +218,42 @@ const FAQ_ITEMS = [
   {
     question: "How does the AI generate videos?",
     answer:
-      "AIVidio uses a multi-step pipeline: first, GPT-4 writes a researched script based on your topic. Then our visual engine matches each section with appropriate imagery (stock footage, oil paintings, or AI-generated scenes). Finally, a neural voice narrates the script while our editor assembles everything with transitions, captions, and background music.",
+      "AIVidio uses a multi-step pipeline: GPT-4o writes a researched script, our visual engine matches each section with imagery (stock footage, oil paintings, or AI-generated scenes), a neural voice narrates the script, and our editor assembles everything with transitions, captions, and background music.",
   },
   {
-    question: "Can I edit the script before generating the video?",
+    question: "Can I edit the script before generating?",
     answer:
-      "Absolutely. After the AI generates a script, you get a full editor where you can rewrite sections, adjust timing, change the tone, or add custom segments. You can also provide your own script from scratch and skip the AI writing step entirely.",
+      "Absolutely. After the AI generates a script, you get a full editor where you can rewrite sections, adjust timing, change the tone, or add custom segments. You can also provide your own script from scratch.",
   },
   {
     question: "How long does it take to produce a video?",
     answer:
-      "A typical 8-10 minute video takes about 5-8 minutes to produce. Rendering time depends on the visual style -- stock footage videos are fastest, while AI-generated cinematic scenes take slightly longer. Pro and Business users get priority rendering queues.",
+      "A typical 8-10 minute video takes about 5-8 minutes to produce. Stock footage videos render fastest, while AI-generated cinematic scenes take slightly longer. Pro and Business users get priority rendering.",
   },
   {
     question: "Do I own the videos I create?",
     answer:
-      "Yes. All videos produced with AIVidio are yours to use commercially. Pro and Business plans include full commercial rights with no attribution required. Free plan videos include a small AIVidio watermark.",
+      "Yes. All videos are yours to use commercially. Pro and Business plans include full commercial rights with no attribution required. Free plan videos include a small watermark.",
   },
   {
-    question: "What YouTube niches work best with AIVidio?",
+    question: "What YouTube niches work best?",
     answer:
-      "AIVidio works well for finance, history, true crime, motivation, technology explainers, top-10 lists, educational content, and news commentary. Any niche that uses narration over visuals (rather than talking-head footage) is a great fit.",
+      "Finance, history, true crime, motivation, technology explainers, top-10 lists, educational content, and news commentary. Any niche that uses narration over visuals is a great fit.",
   },
   {
-    question: "Can I cancel my subscription anytime?",
+    question: "How many visual styles are available?",
     answer:
-      "Yes. There are no contracts or cancellation fees. You can cancel your Pro or Business subscription at any time from your account settings. You will retain access until the end of your current billing period.",
+      "10 styles: Oil Painting, Cinematic Realism, Anime, Watercolor, Dark Noir, Retro Vintage, Corporate Clean, Sci-Fi, Nature, and Stock Footage. Each is optimized for specific content types.",
+  },
+  {
+    question: "Can I use AIVidio for YouTube monetization?",
+    answer:
+      "Yes. Videos created with AIVidio are eligible for YouTube monetization. The content is unique, original, and meets YouTube's guidelines for AI-assisted content when properly disclosed.",
+  },
+  {
+    question: "Can I cancel anytime?",
+    answer:
+      "Yes. No contracts or cancellation fees. Cancel from your account settings anytime. You retain access until the end of your current billing period.",
   },
 ];
 
@@ -581,11 +269,11 @@ function FAQItem({
   return (
     <div className="border-b border-white/[0.06]">
       <button
-        className="flex w-full items-center justify-between py-5 text-left transition-colors hover:text-[#ececec]"
+        className="flex w-full items-center justify-between py-5 text-left transition-colors hover:text-[#fafafa]"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
-        <span className="pr-4 text-[15px] font-medium text-[#ececec]">
+        <span className="pr-4 text-[15px] font-medium text-[#fafafa]">
           {question}
         </span>
         <ChevronDown
@@ -595,12 +283,12 @@ function FAQItem({
         />
       </button>
       <div
-        className={`grid transition-all duration-200 ease-out ${
+        className={`grid transition-all duration-300 ease-out ${
           open ? "grid-rows-[1fr] pb-5" : "grid-rows-[0fr]"
         }`}
       >
         <div className="overflow-hidden">
-          <p className="text-sm leading-relaxed text-[#999]">{answer}</p>
+          <p className="text-sm leading-relaxed text-[#a1a1a1]">{answer}</p>
         </div>
       </div>
     </div>
@@ -609,14 +297,14 @@ function FAQItem({
 
 function FAQSection() {
   return (
-    <section id="faq" className="border-t border-white/[0.06] bg-[#111111] py-24 sm:py-32">
+    <section id="faq" className="py-24 sm:py-32">
       <div className="mx-auto max-w-[720px] px-6">
         {/* Section header */}
         <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#10a37f]">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#10a37f]">
             FAQ
           </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#ececec] sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#fafafa] sm:text-4xl lg:text-[42px]">
             Frequently asked questions
           </h2>
         </div>
@@ -637,36 +325,34 @@ function FAQSection() {
 }
 
 /* ==========================================================================
-   CTA Section
+   Final CTA Section
    ========================================================================== */
 
 function CTASection() {
   return (
     <section className="py-24 sm:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#1a1a1a] p-12 sm:p-16 text-center">
+        <div className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#111] p-12 text-center sm:p-20">
           {/* Background glow */}
-          <div className="pointer-events-none absolute left-1/2 top-0 h-[300px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#10a37f]/[0.08] blur-[100px]" />
+          <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#10a37f]/[0.08] blur-[120px]" />
+          <div className="pointer-events-none absolute bottom-0 left-1/2 h-[200px] w-[400px] -translate-x-1/2 translate-y-1/2 rounded-full bg-[#10a37f]/[0.04] blur-[80px]" />
 
           <div className="relative z-10">
-            <h2 className="text-3xl font-bold tracking-tight text-[#ececec] sm:text-4xl">
-              Start creating videos today
+            <h2 className="text-3xl font-bold tracking-tight text-[#fafafa] sm:text-4xl lg:text-5xl">
+              Ready to create your first video?
             </h2>
-            <p className="mx-auto mt-4 max-w-[480px] text-base text-[#999]">
-              Join thousands of creators using AI to produce professional
-              YouTube content at scale.
+            <p className="mx-auto mt-5 max-w-[480px] text-base text-[#a1a1a1] sm:text-lg">
+              Start creating free — no credit card required.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Button size="lg" className="px-8 text-[15px]" asChild>
-                <Link href="/signup">
-                  Get Started Free
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
+            <div className="mt-10">
+              <Link
+                href="/signup"
+                className="glow-green-button inline-flex h-12 items-center gap-2 rounded-full bg-[#10a37f] px-8 text-[15px] font-semibold text-white transition-all duration-150 hover:bg-[#0d8c6d] active:scale-[0.98]"
+              >
+                Get Started Free
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <p className="mt-6 text-xs text-[#666]">
-              Free plan available. No credit card required.
-            </p>
           </div>
         </div>
       </div>
@@ -705,24 +391,24 @@ const FOOTER_LINKS = {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/[0.06] bg-[#0d0d0d] py-16">
+    <footer className="border-t border-white/[0.06] bg-[#050505] py-16">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/landing" className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f]">
-                <span className="text-xs font-bold text-white tracking-tight">
+                <span className="text-[11px] font-bold tracking-tight text-white">
                   Ai
                 </span>
               </div>
-              <span className="text-[15px] font-semibold text-[#ececec] tracking-tight">
+              <span className="text-[15px] font-semibold tracking-tight text-[#fafafa]">
                 AIVidio
               </span>
             </Link>
             <p className="mt-4 max-w-[280px] text-sm leading-relaxed text-[#666]">
-              AI-powered video production for YouTube creators. From script to
-              screen in minutes.
+              AI-powered video creation for YouTube. From script to screen in
+              minutes.
             </p>
             {/* Social links */}
             <div className="mt-6 flex gap-4">
@@ -730,11 +416,11 @@ function Footer() {
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#666] transition-colors hover:text-[#ececec]"
-                aria-label="Twitter"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-[#666] transition-colors hover:border-white/[0.1] hover:text-[#fafafa]"
+                aria-label="X (Twitter)"
               >
                 <svg
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -745,15 +431,30 @@ function Footer() {
                 href="https://youtube.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#666] transition-colors hover:text-[#ececec]"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-[#666] transition-colors hover:border-white/[0.1] hover:text-[#fafafa]"
                 aria-label="YouTube"
               >
                 <svg
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+              </a>
+              <a
+                href="https://discord.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-[#666] transition-colors hover:border-white/[0.1] hover:text-[#fafafa]"
+                aria-label="Discord"
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
                 </svg>
               </a>
             </div>
@@ -762,7 +463,7 @@ function Footer() {
           {/* Link columns */}
           {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
             <div key={heading}>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-[#666]">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.15em] text-[#555]">
                 {heading}
               </h4>
               <ul className="mt-4 flex flex-col gap-3">
@@ -770,7 +471,7 @@ function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-sm text-[#999] transition-colors hover:text-[#ececec]"
+                      className="text-sm text-[#a1a1a1] transition-colors hover:text-[#fafafa]"
                     >
                       {link.label}
                     </a>
@@ -784,9 +485,11 @@ function Footer() {
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-8 sm:flex-row">
           <p className="text-xs text-[#444]">
-            2024 AIVidio. All rights reserved.
+            &copy; 2025 AIVidio. All rights reserved.
           </p>
-          <p className="text-xs text-[#444]">Made with AI</p>
+          <p className="text-xs text-[#333]">
+            Built with AI, for AI creators.
+          </p>
         </div>
       </div>
     </footer>
@@ -794,7 +497,7 @@ function Footer() {
 }
 
 /* ==========================================================================
-   Landing Page
+   Landing Page — Full Assembly
    ========================================================================== */
 
 export default function LandingPage() {
@@ -803,8 +506,8 @@ export default function LandingPage() {
       <HeroSection />
       <SocialProofBar />
       <HowItWorksSection />
-      <FeaturesSection />
-      <StyleShowcaseSection />
+      <BentoGrid />
+      <StyleShowcase />
       <PricingSection />
       <FAQSection />
       <CTASection />

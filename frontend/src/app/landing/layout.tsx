@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 
 interface LandingLayoutProps {
@@ -22,7 +21,7 @@ function NavLink({
     <a
       href={href}
       onClick={onClick}
-      className="text-sm text-[#999] transition-colors duration-150 hover:text-[#ececec]"
+      className="text-[13px] font-medium text-[#a1a1a1] transition-colors duration-150 hover:text-[#fafafa]"
     >
       {children}
     </a>
@@ -40,12 +39,12 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d]">
+    <div className="min-h-screen bg-black">
       {/* Sticky Navigation */}
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-[#0d0d0d]/80 backdrop-blur-xl border-b border-white/[0.06]"
+            ? "border-b border-white/[0.06] bg-black/80 backdrop-blur-xl"
             : "bg-transparent"
         }`}
       >
@@ -54,35 +53,41 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
             {/* Logo */}
             <Link href="/landing" className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f]">
-                <span className="text-xs font-bold text-white tracking-tight">
+                <span className="text-[11px] font-bold tracking-tight text-white">
                   Ai
                 </span>
               </div>
-              <span className="text-[15px] font-semibold text-[#ececec] tracking-tight">
+              <span className="text-[15px] font-semibold tracking-tight text-[#fafafa]">
                 AIVidio
               </span>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation — center */}
             <div className="hidden items-center gap-8 md:flex">
               <NavLink href="#features">Features</NavLink>
+              <NavLink href="#how-it-works">How it Works</NavLink>
               <NavLink href="#pricing">Pricing</NavLink>
-              <NavLink href="#faq">FAQ</NavLink>
             </div>
 
-            {/* Desktop CTA */}
-            <div className="hidden items-center gap-3 md:flex">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link href="/signup">Get Started</Link>
-              </Button>
+            {/* Desktop CTA — right */}
+            <div className="hidden items-center gap-4 md:flex">
+              <Link
+                href="/login"
+                className="text-[13px] font-medium text-[#a1a1a1] transition-colors duration-150 hover:text-[#fafafa]"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/signup"
+                className="glow-green-sm inline-flex h-9 items-center rounded-full bg-[#10a37f] px-5 text-[13px] font-semibold text-white transition-all duration-150 hover:bg-[#0d8c6d] active:scale-[0.98]"
+              >
+                Get Started Free
+              </Link>
             </div>
 
             {/* Mobile Menu Toggle */}
             <button
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-[#999] transition-colors hover:bg-white/[0.06] hover:text-[#ececec] md:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-[#a1a1a1] transition-colors hover:bg-white/[0.06] hover:text-[#fafafa] md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
@@ -96,35 +101,46 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
         </div>
 
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="border-t border-white/[0.06] bg-[#0d0d0d]/95 backdrop-blur-xl md:hidden">
-            <div className="flex flex-col gap-1 px-6 py-4">
-              <NavLink
-                href="#features"
-                onClick={() => setMobileMenuOpen(false)}
+        <div
+          className={`overflow-hidden border-t border-white/[0.06] bg-black/95 backdrop-blur-xl transition-all duration-300 md:hidden ${
+            mobileMenuOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0 border-transparent"
+          }`}
+        >
+          <div className="flex flex-col gap-1 px-6 py-4">
+            <NavLink
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Features
+            </NavLink>
+            <NavLink
+              href="#how-it-works"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              How it Works
+            </NavLink>
+            <NavLink
+              href="#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Pricing
+            </NavLink>
+            <div className="mt-4 flex flex-col gap-2">
+              <Link
+                href="/login"
+                className="flex h-10 items-center justify-center rounded-xl border border-white/[0.08] text-sm font-medium text-[#fafafa] transition-colors hover:bg-white/[0.04]"
               >
-                Features
-              </NavLink>
-              <NavLink
-                href="#pricing"
-                onClick={() => setMobileMenuOpen(false)}
+                Log in
+              </Link>
+              <Link
+                href="/signup"
+                className="flex h-10 items-center justify-center rounded-xl bg-[#10a37f] text-sm font-semibold text-white transition-colors hover:bg-[#0d8c6d]"
               >
-                Pricing
-              </NavLink>
-              <NavLink href="#faq" onClick={() => setMobileMenuOpen(false)}>
-                FAQ
-              </NavLink>
-              <div className="mt-4 flex flex-col gap-2">
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href="/login">Sign In</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/signup">Get Started</Link>
-                </Button>
-              </div>
+                Get Started Free
+              </Link>
             </div>
           </div>
-        )}
+        </div>
       </nav>
 
       {/* Page Content */}
