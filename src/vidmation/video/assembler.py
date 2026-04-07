@@ -650,7 +650,8 @@ class VideoAssembler:
     def _concat_clips(self, clip_paths: list[Path], output_path: Path) -> None:
         """Concatenate clips using the ffmpeg concat demuxer (no re-encode)."""
         concat_list = self.work_dir / "concat_list.txt"
-        lines = [f"file '{p}'" for p in clip_paths]
+        # Use absolute paths to avoid relative-path resolution issues
+        lines = [f"file '{Path(p).resolve()}'" for p in clip_paths]
         concat_list.write_text("\n".join(lines), encoding="utf-8")
 
         try:
