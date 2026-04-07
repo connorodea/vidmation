@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 import {
   Check,
   Loader2,
   Clock,
   ExternalLink,
+  AlertCircle,
   FileText,
   Volume2,
   Image,
@@ -61,61 +63,144 @@ export function GenerationProgress({
     estimatedTimeRemaining: null,
     videoId: null,
   });
+  const [pollError, setPollError] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const consecutiveErrorsRef = useRef(0);
 
   const isComplete = progress.completedStages.length === STAGES.length;
 
-  // Simulate progress for demo (replace with real API polling)
-  const simulateProgress = useCallback(() => {
-    let stageIndex = 0;
-    let pct = 0;
+  /**
+   * Map the backend stage name to our local PipelineStage type.
+   * The backend may use names like "generating_script", "voiceover", etc.
+   */
+  const mapStage = useCallback((backendStage: string): PipelineStage => {
+    const mapping: Record<string, PipelineStage> = {
+      script: "script",
+      generating_script: "script",
+      voiceover: "voiceover",
+      generating_voiceover: "voiceover",
+      images: "images",
+      generating_images: "images",
+      assembly: "assembly",
+      assembling: "assembly",
+      captions: "captions",
+      generating_captions: "captions",
+      export: "export",
+      exporting: "export",
+      rendering: "export",
+    };
+    return mapping[backendStage] ?? "script";
+  }, []);
 
-    const interval = setInterval(() => {
-      pct += Math.random() * 8 + 2;
+  /**
+   * Derive which stages are completed based on the current stage index.
+   */
+  const deriveCompleted = useCallback(
+    (currentStage: PipelineStage): PipelineStage[] => {
+      const idx = STAGES.findIndex((s) => s.id === currentStage);
+      if (idx <= 0) return [];
+      return STAGES.slice(0, idx).map((s) => s.id);
+    },
+    []
+  );
 
-      if (pct >= 100) {
-        pct = 0;
-        stageIndex++;
+  // Poll the real API for job progress every 3 seconds
+  useEffect(() => {
+    if (!jobId || isComplete) return;
 
-        if (stageIndex >= STAGES.length) {
-          clearInterval(interval);
+    const poll = async () => {
+      try {
+        const result = (await api.getJobProgress(jobId)) as {
+          status: string;
+          current_stage?: string;
+          progress_pct?: number;
+          stages?: { id: string; status: string }[];
+          estimated_seconds_remaining?: number;
+          video_id?: string;
+        };
+
+        consecutiveErrorsRef.current = 0;
+        setPollError(null);
+
+        // Check terminal states
+        if (result.status === "completed" || result.status === "done") {
           setProgress({
             currentStage: "export",
             completedStages: STAGES.map((s) => s.id),
             progressPct: 100,
             estimatedTimeRemaining: 0,
-            videoId: "demo-video-id",
+            videoId: result.video_id ?? null,
           });
+
+          // Stop polling
+          if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+          }
           return;
         }
+
+        if (result.status === "failed" || result.status === "error") {
+          setPollError("Video generation failed. Please try again.");
+          if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+          }
+          return;
+        }
+
+        // Map backend response to our progress state
+        const currentStage = result.current_stage
+          ? mapStage(result.current_stage)
+          : "script";
+
+        // If the backend provides a stages array with statuses, use it
+        let completedStages: PipelineStage[];
+        if (result.stages && result.stages.length > 0) {
+          completedStages = result.stages
+            .filter(
+              (s: { id: string; status: string }) =>
+                s.status === "completed" || s.status === "done"
+            )
+            .map((s: { id: string; status: string }) => mapStage(s.id));
+        } else {
+          completedStages = deriveCompleted(currentStage);
+        }
+
+        setProgress({
+          currentStage,
+          completedStages,
+          progressPct: Math.min(result.progress_pct ?? 0, 99),
+          estimatedTimeRemaining:
+            result.estimated_seconds_remaining ?? null,
+          videoId: result.video_id ?? null,
+        });
+      } catch (err) {
+        consecutiveErrorsRef.current += 1;
+        // Only show error after 3 consecutive failures to avoid transient blips
+        if (consecutiveErrorsRef.current >= 3) {
+          setPollError(
+            err instanceof Error
+              ? err.message
+              : "Lost connection to server. Retrying..."
+          );
+        }
       }
+    };
 
-      const completed = STAGES.slice(0, stageIndex).map((s) => s.id);
-      const remaining = Math.max(
-        0,
-        (STAGES.length - stageIndex) * 30 - Math.floor(pct / 3)
-      );
+    // Initial poll immediately
+    poll();
 
-      setProgress({
-        currentStage: STAGES[stageIndex].id,
-        completedStages: completed,
-        progressPct: Math.min(
-          Math.round(
-            ((stageIndex * 100 + pct) / (STAGES.length * 100)) * 100
-          ),
-          99
-        ),
-        estimatedTimeRemaining: remaining,
-        videoId: null,
-      });
-    }, 800);
+    // Then poll every 3 seconds
+    pollTimerRef.current = setInterval(poll, 3000);
 
-    return interval;
-  }, []);
-
-  useEffect(() => {
-    const interval = simulateProgress();
-    return () => clearInterval(interval);
-  }, [simulateProgress]);
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [jobId, isComplete, mapStage, deriveCompleted]);
 
   function formatTimeRemaining(seconds: number | null): string {
     if (seconds === null || seconds <= 0) return "Almost done...";
@@ -241,6 +326,14 @@ export function GenerationProgress({
           );
         })}
       </div>
+
+      {/* Poll error */}
+      {pollError && !isComplete && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4 flex items-center gap-3">
+          <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-sm text-red-400">{pollError}</p>
+        </div>
+      )}
 
       {/* View Video button (when complete) */}
       {isComplete && progress.videoId && (

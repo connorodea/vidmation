@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 import {
   ArrowLeft,
   Sparkles,
@@ -77,7 +79,7 @@ function formatTime(seconds: number): string {
   return `${mins}m ${secs}s`;
 }
 
-function estimateCost(data: WizardData): string {
+function estimateCostLocal(data: WizardData): string {
   let cost = 0.05; // base
   cost += data.totalWordCount * 0.0001; // per word
   if (data.style === "ai-cinematic") cost += 0.15;
@@ -98,6 +100,7 @@ function estimateGenerationTime(data: WizardData): string {
 interface StepReviewProps extends WizardStepProps {
   onGenerate: () => void;
   isGenerating: boolean;
+  generateError?: string | null;
 }
 
 export function StepReview({
@@ -105,7 +108,41 @@ export function StepReview({
   onBack,
   onGenerate,
   isGenerating,
+  generateError,
 }: StepReviewProps) {
+  const [costEstimate, setCostEstimate] = useState<string | null>(null);
+  const [costBreakdown, setCostBreakdown] = useState<Record<string, number> | null>(null);
+  const [costLoading, setCostLoading] = useState(false);
+
+  // Fetch real cost estimate from the API
+  useEffect(() => {
+    if (!data.style || !data.duration) return;
+
+    let cancelled = false;
+    setCostLoading(true);
+
+    api
+      .getCostEstimate({ style: data.style, duration: data.duration })
+      .then((result) => {
+        if (cancelled) return;
+        setCostEstimate(result.estimated_cost.toFixed(2));
+        setCostBreakdown(result.breakdown ?? null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Fall back to local estimate on API failure
+        setCostEstimate(estimateCostLocal(data));
+        setCostBreakdown(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCostLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.style, data.duration, data.totalWordCount, data.musicStyle]);
+
   const styleIcon = () => {
     switch (data.style) {
       case "dark-finance":
@@ -221,12 +258,28 @@ export function StepReview({
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-[#1a1a1a] p-5">
           <p className="text-xs text-[#666] mb-1">Estimated Cost</p>
-          <p className="text-2xl font-semibold text-[#ececec]">
-            ${estimateCost(data)}
-          </p>
+          {costLoading ? (
+            <div className="h-8 flex items-center">
+              <div className="h-4 w-4 border-2 border-[#10a37f]/30 border-t-[#10a37f] rounded-full animate-spin" />
+            </div>
+          ) : (
+            <p className="text-2xl font-semibold text-[#ececec]">
+              ${costEstimate ?? estimateCostLocal(data)}
+            </p>
+          )}
           <p className="text-[11px] text-[#666] mt-1">
             Based on script length and style
           </p>
+          {costBreakdown && (
+            <div className="mt-2 space-y-0.5">
+              {Object.entries(costBreakdown).map(([key, value]) => (
+                <div key={key} className="flex justify-between text-[10px] text-[#555]">
+                  <span className="capitalize">{key.replace(/_/g, " ")}</span>
+                  <span>${value.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="rounded-xl border border-white/[0.06] bg-[#1a1a1a] p-5">
           <p className="text-xs text-[#666] mb-1">Generation Time</p>
@@ -238,6 +291,13 @@ export function StepReview({
           </p>
         </div>
       </div>
+
+      {/* Generation error */}
+      {generateError && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4">
+          <p className="text-sm text-red-400">{generateError}</p>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-2">

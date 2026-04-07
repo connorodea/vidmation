@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!res.ok) {
           clearTokens();
           setUser(null);
-          router.push("/login");
+          router.push("/landing");
           return;
         }
 
@@ -157,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
     clearTokens();
     setUser(null);
-    router.push("/login");
+    router.push("/landing");
   }, [router]);
 
   // ---- value ----

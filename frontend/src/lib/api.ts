@@ -98,7 +98,7 @@ class ApiClient {
       // Refresh failed — clear auth state and redirect to login
       clearTokens();
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        window.location.href = "/landing";
       }
       throw new Error("Session expired. Please sign in again.");
     }
@@ -189,8 +189,21 @@ class ApiClient {
   // Generate
   // --------------------------------------------------------------------------
 
-  async generateScript(data: { topic: string; channel_name: string }) {
-    return this.request("/generate/script", {
+  async generateScript(data: {
+    topic: string;
+    style: string;
+    niche: string;
+    duration: string;
+  }) {
+    return this.request<{
+      title: string;
+      hook: string;
+      sections: { heading: string; content: string }[];
+      outro: string;
+      tags: string[];
+      total_words: number;
+      estimated_duration_seconds: number;
+    }>("/generate/script", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -199,9 +212,17 @@ class ApiClient {
   async generateVideo(data: {
     topic: string;
     channel_name: string;
+    style: string;
     format?: string;
+    voice: string;
+    music_style: string;
+    caption_style: string;
+    duration: string;
   }) {
-    return this.request("/generate/video", {
+    return this.request<{
+      job_id: string;
+      status: string;
+    }>("/generate/video", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -210,6 +231,14 @@ class ApiClient {
   // --------------------------------------------------------------------------
   // Analytics
   // --------------------------------------------------------------------------
+
+  async getCostEstimate(params: { style: string; duration: string }) {
+    const query = "?" + new URLSearchParams(params).toString();
+    return this.request<{
+      estimated_cost: number;
+      breakdown: Record<string, number>;
+    }>(`/analytics/estimate${query}`);
+  }
 
   async getCosts(params?: Record<string, string>) {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
