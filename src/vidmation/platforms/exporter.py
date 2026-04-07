@@ -14,8 +14,10 @@ from typing import Any
 
 from vidmation.config.profiles import ChannelProfile
 from vidmation.platforms.base import Platform, PlatformType
+from vidmation.platforms.facebook import FacebookPlatform
 from vidmation.platforms.instagram import InstagramPlatform
 from vidmation.platforms.tiktok import TikTokPlatform
+from vidmation.platforms.twitter import TwitterPlatform
 from vidmation.platforms.youtube import YouTubePlatform
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,9 @@ _PLATFORM_CONSTRUCTORS: dict[str, type[Platform] | tuple[type[Platform], dict[st
     "instagram_reels": (InstagramPlatform, {"sub_format": "reels"}),
     "instagram_feed": (InstagramPlatform, {"sub_format": "feed"}),
     "instagram_stories": (InstagramPlatform, {"sub_format": "stories"}),
+    "facebook": FacebookPlatform,
+    "facebook_square": (FacebookPlatform, {"sub_format": "square"}),
+    "twitter": TwitterPlatform,
 }
 
 # Short aliases for convenience
@@ -43,6 +48,10 @@ _PLATFORM_ALIASES: dict[str, str] = {
     "ig_stories": "instagram_stories",
     "reels": "instagram_reels",
     "stories": "instagram_stories",
+    "fb": "facebook",
+    "fb_square": "facebook_square",
+    "x": "twitter",
+    "tweet": "twitter",
 }
 
 
