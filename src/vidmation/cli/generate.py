@@ -328,6 +328,133 @@ def generate_thumbnail(
 
 
 # ---------------------------------------------------------------------------
+# vidmation generate blog
+# ---------------------------------------------------------------------------
+
+@generate_app.command("blog")
+def generate_from_blog(
+    url: str = typer.Option(..., "--url", "-u", help="Blog post URL to convert into a video."),
+    channel: str = typer.Option("default", "--channel", "-c", help="Channel name for profile."),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output script JSON file path."),
+    full_video: bool = typer.Option(False, "--video", help="Generate the full video (not just the script)."),
+    no_upload: bool = typer.Option(True, "--no-upload", help="Skip YouTube upload."),
+) -> None:
+    """Convert a blog post URL into a video script (and optionally a full video).
+
+    The AI agent scrapes the blog, analyses the content, and generates
+    a structured video script optimised for YouTube.
+
+    Example:
+        vidmation generate blog --url https://example.com/my-post
+        vidmation generate blog --url https://example.com/my-post --video
+    """
+    from vidmation.utils.logging import setup_logging
+
+    setup_logging()
+    init_db()
+
+    settings = get_settings()
+    profile = _resolve_profile(channel)
+
+    # Step 1: Scrape and convert blog to script
+    from vidmation.services.blog2video import create_blog_converter
+
+    with console.status("[cyan]Scraping blog and generating script...[/cyan]"):
+        converter = create_blog_converter(settings=settings)
+        script = converter.convert(url=url, channel_profile=profile)
+
+    console.print(Panel.fit(
+        f"[green]Blog converted![/green]\n\n"
+        f"  Source: [link={url}]{url}[/link]\n"
+        f"  Title:  [bold]{script.get('title', 'N/A')}[/bold]\n"
+        f"  Sections: {len(script.get('sections', []))}\n"
+        f"  Duration: ~{script.get('total_estimated_duration_seconds', 0)}s",
+        title="Blog → Script",
+    ))
+
+    # Save script
+    script_json = json.dumps(script, indent=2)
+    if output:
+        Path(output).write_text(script_json, encoding="utf-8")
+        console.print(f"[green]Script saved to {output}[/green]")
+    else:
+        script_output = Path(f"output/blog_script_{script.get('title', 'untitled')[:30].replace(' ', '_')}.json")
+        script_output.parent.mkdir(parents=True, exist_ok=True)
+        script_output.write_text(script_json, encoding="utf-8")
+        console.print(f"[green]Script saved to {script_output}[/green]")
+
+    # Optionally run full video pipeline
+    if full_video:
+        console.print("\n[bold]Generating full video from blog script...[/bold]")
+
+        import uuid
+        from vidmation.pipeline.context import PipelineContext
+        from vidmation.pipeline.orchestrator import PipelineOrchestrator
+        from vidmation.pipeline.stages import STAGE_REGISTRY
+        from vidmation.utils.files import get_work_dir
+        from vidmation.models.video import VideoFormat
+
+        video_id = str(uuid.uuid4())
+        work_dir = get_work_dir(video_id)
+
+        # Save script to work dir
+        (work_dir / "script.json").write_text(script_json, encoding="utf-8")
+
+        ctx = PipelineContext(
+            video_id=video_id,
+            channel_profile=profile,
+            topic=script.get("title", url),
+            format=VideoFormat("landscape"),
+            work_dir=work_dir,
+        )
+        # Pre-populate the script so pipeline skips script generation
+        ctx.script = script
+        ctx.completed_stages.append("script_generation")
+
+        # Build stage list, skipping script gen (already done)
+        stages = [(n, fn) for n, fn in STAGE_REGISTRY if n != "script_generation"]
+        if no_upload:
+            stages = [(n, fn) for n, fn in stages if n != "upload"]
+
+        orchestrator = PipelineOrchestrator(stages=stages, settings=settings)
+
+        from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Running pipeline...", total=len(stages))
+
+            for name, stage_fn in stages:
+                ctx.current_stage = name
+                progress.update(task, description=f"[cyan]{name}[/cyan]")
+
+                try:
+                    stage_fn(ctx, settings)
+                except Exception as exc:
+                    progress.update(task, description=f"[red]FAILED: {name}[/red]")
+                    err_console.print(f"\n[red]Pipeline failed at '{name}':[/red] {exc}")
+                    ctx.save()
+                    raise typer.Exit(1)
+
+                ctx.completed_stages.append(name)
+                ctx.save()
+                progress.advance(task)
+
+        console.print(Panel.fit(
+            f"[green]Blog → Video complete![/green]\n\n"
+            f"  Source:    [link={url}]{url}[/link]\n"
+            f"  Title:     {script.get('title', 'N/A')}\n"
+            f"  Video:     [dim]{ctx.final_video_path or 'N/A'}[/dim]\n"
+            f"  Thumbnail: [dim]{ctx.thumbnail_path or 'N/A'}[/dim]",
+            title="Complete",
+        ))
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
