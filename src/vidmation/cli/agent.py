@@ -7,8 +7,9 @@ import sys
 from pathlib import Path
 
 import typer
+from rich.panel import Panel
 
-from vidmation.cli.theme import console, err, error, success, header, result_panel, spinner, styled_table, pipeline_progress
+from vidmation.cli.theme import console, error, warning, header, result_panel, spinner, styled_table
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
 
@@ -32,7 +33,7 @@ def _load_profile(channel: str) -> ChannelProfile:
     if profile_path.exists():
         return load_profile(profile_path)
 
-    console.print(f"[yellow]Profile '{channel}' not found. Using default profile.[/yellow]")
+    warning(f"Profile '{channel}' not found. Using default profile.")
     return get_default_profile()
 
 
@@ -57,15 +58,17 @@ def create_video(
     profile = _load_profile(channel)
     settings = get_settings()
 
-    console.print(Panel.fit(
-        f"[bold cyan]VIDMATION AI Agent[/bold cyan]\n\n"
-        f"Topic: [bold]{topic}[/bold]\n"
-        f"Channel: {profile.name} ({profile.niche})\n"
-        f"Duration: {duration}\n"
-        f"Format: {format}\n"
-        f"Budget: {'$' + f'{budget:.2f}' if budget else 'Unlimited'}\n"
-        f"Upload: {'Yes' if upload else 'No'}",
-        title="Video Creation",
+    console.print(header("AI Agent", "Claude-powered end-to-end video creation"))
+    console.print(result_panel(
+        "Video Creation",
+        [
+            ("Topic:", topic),
+            ("Channel:", f"{profile.name} ({profile.niche})"),
+            ("Duration:", duration),
+            ("Format:", format),
+            ("Budget:", f"${budget:.2f}" if budget else "Unlimited"),
+            ("Upload:", "Yes" if upload else "No"),
+        ],
     ))
 
     # Step tracking for progress display
@@ -81,7 +84,7 @@ def create_video(
     try:
         agent = AgentOrchestrator(settings=settings)
 
-        with console.status("[bold cyan]Agent is working...", spinner="dots"):
+        with spinner("Agent is working..."):
             ctx = agent.create_video(
                 topic=topic,
                 channel_profile=profile,
@@ -97,13 +100,13 @@ def create_video(
         _show_summary(ctx, agent)
 
     except ValueError as exc:
-        console.print(f"[red]Configuration error:[/red] {exc}")
+        error(f"Configuration error: {exc}")
         raise typer.Exit(code=1)
     except KeyboardInterrupt:
-        console.print("\n[yellow]Agent interrupted by user.[/yellow]")
+        warning("Agent interrupted by user.")
         raise typer.Exit(code=130)
     except Exception as exc:
-        console.print(f"[red]Agent error:[/red] {exc}")
+        error(f"Agent error: {exc}")
         if verbose:
             console.print_exception()
         raise typer.Exit(code=1)
@@ -125,27 +128,29 @@ def plan_video(
     profile = _load_profile(channel)
     settings = get_settings()
 
-    console.print(Panel.fit(
-        f"[bold cyan]VIDMATION Production Plan[/bold cyan]\n\n"
-        f"Topic: [bold]{topic}[/bold]\n"
-        f"Channel: {profile.name} ({profile.niche})",
-        title="Plan Mode",
+    console.print(header("Production Plan", "Plan Mode"))
+    console.print(result_panel(
+        "Plan Details",
+        [
+            ("Topic:", topic),
+            ("Channel:", f"{profile.name} ({profile.niche})"),
+        ],
     ))
 
     try:
         agent = AgentOrchestrator(settings=settings)
 
-        with console.status("[bold cyan]Agent is planning...", spinner="dots"):
+        with spinner("Agent is planning..."):
             plan = agent.plan_video(topic=topic, channel_profile=profile)
 
         console.print()
         console.print(Panel(plan, title="Production Plan", border_style="cyan"))
 
     except ValueError as exc:
-        console.print(f"[red]Configuration error:[/red] {exc}")
+        error(f"Configuration error: {exc}")
         raise typer.Exit(code=1)
     except Exception as exc:
-        console.print(f"[red]Error:[/red] {exc}")
+        error(str(exc))
         raise typer.Exit(code=1)
 
 
@@ -166,7 +171,7 @@ def review_video(
     # Try to load context from output dir
     context_path = settings.output_dir / video_id / "pipeline_context.json"
     if not context_path.exists():
-        console.print(f"[red]Context not found:[/red] {context_path}")
+        error(f"Context not found: {context_path}")
         raise typer.Exit(code=1)
 
     try:
@@ -187,23 +192,23 @@ def review_video(
 
         agent = AgentOrchestrator(settings=settings)
 
-        with console.status("[bold cyan]Agent is reviewing...", spinner="dots"):
+        with spinner("Agent is reviewing..."):
             review = agent.review_video(ctx)
 
         console.print()
         console.print(Panel(review, title="Video Review", border_style="cyan"))
 
     except json.JSONDecodeError:
-        console.print(f"[red]Invalid JSON in context file:[/red] {context_path}")
+        error(f"Invalid JSON in context file: {context_path}")
         raise typer.Exit(code=1)
     except Exception as exc:
-        console.print(f"[red]Error:[/red] {exc}")
+        error(str(exc))
         raise typer.Exit(code=1)
 
 
 def _show_summary(ctx: "PipelineContext", agent: "AgentOrchestrator") -> None:
     """Display a summary table after video creation."""
-    table = Table(title="Video Creation Summary", show_header=True)
+    table = styled_table("Video Creation Summary")
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="white")
 

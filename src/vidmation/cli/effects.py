@@ -12,7 +12,7 @@ from typing import Optional
 
 import typer
 
-from vidmation.cli.theme import console, err, error, success, info, styled_table, result_panel, spinner
+from vidmation.cli.theme import console, err, error, success, info, warning, styled_table, result_panel, spinner
 
 effects_app = typer.Typer(no_args_is_help=True)
 
@@ -210,11 +210,13 @@ def effects_silence(
     video_path = _validate_input(input)
     output_path = Path(output) if output else None
 
-    console.print(Panel.fit(
-        f"[bold]Input:[/bold] {video_path.name}\n"
-        f"[bold]Mode:[/bold] {mode}\n"
-        f"[bold]Remove fillers:[/bold] {fillers}",
-        title="Silence Remover",
+    console.print(result_panel(
+        "Silence Remover",
+        [
+            ("Input:", video_path.name),
+            ("Mode:", mode),
+            ("Remove fillers:", str(fillers)),
+        ],
     ))
 
     remover = SilenceRemover()
@@ -222,7 +224,7 @@ def effects_silence(
     if fillers:
         word_timestamps = _load_timestamps(timestamps, video_path)
 
-        with console.status("[cyan]Smart trimming (silence + fillers)...[/cyan]"):
+        with spinner("Smart trimming (silence + fillers)..."):
             result_path, stats = remover.smart_trim(
                 video_path=video_path,
                 word_timestamps=word_timestamps,
@@ -231,25 +233,26 @@ def effects_silence(
                 output_path=output_path,
             )
 
-        console.print(Panel.fit(
-            f"[green]Smart trim complete![/green]\n\n"
-            f"  Original duration: [cyan]{stats['original_duration']:.1f}s[/cyan]\n"
-            f"  New duration:      [cyan]{stats['new_duration']:.1f}s[/cyan]\n"
-            f"  Removed:           [yellow]{stats['removed_seconds']:.1f}s[/yellow]\n"
-            f"  Segments cut:      {stats['segments_cut']}\n"
-            f"  Fillers removed:   {stats['fillers_removed']}\n\n"
-            f"  Output: [dim]{result_path}[/dim]",
-            title="Results",
+        console.print(result_panel(
+            "Results",
+            [
+                ("Original duration:", f"{stats['original_duration']:.1f}s"),
+                ("New duration:", f"{stats['new_duration']:.1f}s"),
+                ("Removed:", f"{stats['removed_seconds']:.1f}s"),
+                ("Segments cut:", str(stats["segments_cut"])),
+                ("Fillers removed:", str(stats["fillers_removed"])),
+                ("Output:", str(result_path)),
+            ],
         ))
     else:
-        with console.status("[cyan]Removing silence...[/cyan]"):
+        with spinner("Removing silence..."):
             result_path = remover.remove_silence(
                 video_path=video_path,
                 mode=mode,
                 output_path=output_path,
             )
 
-        console.print(f"\n[green]Silence removed![/green] Output: [cyan]{result_path}[/cyan]")
+        success(f"Silence removed! Output: {result_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -288,24 +291,26 @@ def effects_broll(
     word_timestamps = _load_timestamps(timestamps, video_path)
     output_path = Path(output) if output else None
 
-    console.print(Panel.fit(
-        f"[bold]Input:[/bold] {video_path.name}\n"
-        f"[bold]Max clips:[/bold] {max_clips}\n"
-        f"[bold]Blend mode:[/bold] {blend}\n"
-        f"[bold]Words:[/bold] {len(word_timestamps)}",
-        title="Magic B-Roll",
+    console.print(result_panel(
+        "Magic B-Roll",
+        [
+            ("Input:", video_path.name),
+            ("Max clips:", str(max_clips)),
+            ("Blend mode:", blend),
+            ("Words:", str(len(word_timestamps))),
+        ],
     ))
 
     broll = MagicBRoll()
 
-    with console.status("[cyan]Analyzing transcript for B-roll opportunities...[/cyan]"):
+    with spinner("Analyzing transcript for B-roll opportunities..."):
         suggestions = broll.analyze_transcript(
             word_timestamps=word_timestamps,
             max_clips=max_clips,
         )
 
     if suggestions:
-        table = Table(title=f"B-Roll Suggestions ({len(suggestions)})")
+        table = styled_table(f"B-Roll Suggestions ({len(suggestions)})")
         table.add_column("Time", width=12, justify="right")
         table.add_column("Priority", width=8, justify="center")
         table.add_column("Visual Query", max_width=30)
@@ -320,7 +325,7 @@ def effects_broll(
             )
         console.print(table)
 
-    with console.status("[cyan]Sourcing and inserting B-roll...[/cyan]"):
+    with spinner("Sourcing and inserting B-roll..."):
         result = broll.auto_broll(
             video_path=video_path,
             word_timestamps=word_timestamps,
@@ -329,7 +334,7 @@ def effects_broll(
             output_path=output_path,
         )
 
-    console.print(f"\n[green]B-roll inserted![/green] Output: [cyan]{result}[/cyan]")
+    success(f"B-roll inserted! Output: {result}")
 
 
 # ---------------------------------------------------------------------------
@@ -365,17 +370,19 @@ def effects_emoji(
     word_timestamps = _load_timestamps(timestamps, video_path)
     output_path = Path(output) if output else None
 
-    console.print(Panel.fit(
-        f"[bold]Input:[/bold] {video_path.name}\n"
-        f"[bold]Emojis:[/bold] {emojis}\n"
-        f"[bold]SFX:[/bold] {sfx}\n"
-        f"[bold]Words:[/bold] {len(word_timestamps)}",
-        title="Emoji & SFX Engine",
+    console.print(result_panel(
+        "Emoji & SFX Engine",
+        [
+            ("Input:", video_path.name),
+            ("Emojis:", str(emojis)),
+            ("SFX:", str(sfx)),
+            ("Words:", str(len(word_timestamps))),
+        ],
     ))
 
     engine = EmojiSFXEngine()
 
-    with console.status("[cyan]Enhancing video with emojis and SFX...[/cyan]"):
+    with spinner("Enhancing video with emojis and SFX..."):
         result = engine.auto_enhance(
             video_path=video_path,
             word_timestamps=word_timestamps,
@@ -384,7 +391,7 @@ def effects_emoji(
             output_path=output_path,
         )
 
-    console.print(f"\n[green]Enhancement complete![/green] Output: [cyan]{result}[/cyan]")
+    success(f"Enhancement complete! Output: {result}")
 
 
 # ---------------------------------------------------------------------------
@@ -428,20 +435,22 @@ def effects_clips(
     word_timestamps = _load_timestamps(timestamps, video_path)
     out_dir = Path(output_dir) if output_dir else None
 
-    console.print(Panel.fit(
-        f"[bold]Input:[/bold] {video_path.name}\n"
-        f"[bold]Count:[/bold] {count}\n"
-        f"[bold]Format:[/bold] {format}\n"
-        f"[bold]Captions:[/bold] {captions}\n"
-        f"[bold]Duration:[/bold] {min_duration}-{max_duration}s\n"
-        f"[bold]Words:[/bold] {len(word_timestamps)}",
-        title="Magic Clips",
+    console.print(result_panel(
+        "Magic Clips",
+        [
+            ("Input:", video_path.name),
+            ("Count:", str(count)),
+            ("Format:", format),
+            ("Captions:", str(captions)),
+            ("Duration:", f"{min_duration}-{max_duration}s"),
+            ("Words:", str(len(word_timestamps))),
+        ],
     ))
 
     clips_engine = MagicClips()
 
     # Show clip analysis first.
-    with console.status("[cyan]Analyzing video for viral moments...[/cyan]"):
+    with spinner("Analyzing video for viral moments..."):
         clip_candidates = clips_engine.analyze_for_clips(
             word_timestamps=word_timestamps,
             target_duration=(min_duration, max_duration),
@@ -449,7 +458,7 @@ def effects_clips(
         )
 
     if clip_candidates:
-        table = Table(title=f"Clip Candidates ({len(clip_candidates)})")
+        table = styled_table(f"Clip Candidates ({len(clip_candidates)})")
         table.add_column("#", width=4, style="dim")
         table.add_column("Time", width=14, justify="right")
         table.add_column("Score", width=6, justify="right")
@@ -467,7 +476,7 @@ def effects_clips(
             )
         console.print(table)
 
-    with console.status("[cyan]Extracting and processing clips...[/cyan]"):
+    with spinner("Extracting and processing clips..."):
         output_paths = clips_engine.generate_clips(
             video_path=video_path,
             word_timestamps=word_timestamps,
@@ -479,11 +488,11 @@ def effects_clips(
         )
 
     if output_paths:
-        console.print(f"\n[green]Generated {len(output_paths)} clips:[/green]")
+        success(f"Generated {len(output_paths)} clips:")
         for p in output_paths:
-            console.print(f"  [cyan]{p}[/cyan]")
+            info(str(p))
     else:
-        console.print("\n[yellow]No clips generated.[/yellow]")
+        warning("No clips generated.")
 
 
 # ---------------------------------------------------------------------------
@@ -530,24 +539,26 @@ def effects_all(
     else:
         final_output = video_path.parent / f"{video_path.stem}_enhanced{video_path.suffix}"
 
-    console.print(Panel.fit(
-        f"[bold]Input:[/bold] {video_path.name}\n"
-        f"[bold]Silence mode:[/bold] {silence_mode}\n"
-        f"[bold]Zoom style:[/bold] {zoom_style}\n"
-        f"[bold]Max zooms:[/bold] {max_zooms}\n"
-        f"[bold]Words:[/bold] {len(word_timestamps)}",
-        title="Full Effects Pipeline",
+    console.print(result_panel(
+        "Full Effects Pipeline",
+        [
+            ("Input:", video_path.name),
+            ("Silence mode:", silence_mode),
+            ("Zoom style:", zoom_style),
+            ("Max zooms:", str(max_zooms)),
+            ("Words:", str(len(word_timestamps))),
+        ],
     ))
 
     with tempfile.TemporaryDirectory(prefix="vidmation_effects_") as tmp_dir:
         tmp_path = Path(tmp_dir)
 
         # Step 1: Silence removal.
-        console.print("\n[bold cyan]Step 1/3:[/bold cyan] Removing silence and fillers...")
+        info("[bold]Step 1/3:[/bold] Removing silence and fillers...")
         remover = SilenceRemover()
         trimmed_path = tmp_path / "step1_trimmed.mp4"
 
-        with console.status("[cyan]Trimming...[/cyan]"):
+        with spinner("Trimming..."):
             trimmed_path, trim_stats = remover.smart_trim(
                 video_path=video_path,
                 word_timestamps=word_timestamps,
@@ -562,11 +573,11 @@ def effects_all(
         )
 
         # Step 2: Magic zoom.
-        console.print("\n[bold cyan]Step 2/3:[/bold cyan] Applying zoom effects...")
+        info("[bold]Step 2/3:[/bold] Applying zoom effects...")
         zoomer = MagicZoom()
         zoomed_path = tmp_path / "step2_zoomed.mp4"
 
-        with console.status("[cyan]Zooming...[/cyan]"):
+        with spinner("Zooming..."):
             zoomed_path = zoomer.auto_zoom(
                 video_path=trimmed_path,
                 word_timestamps=word_timestamps,
@@ -578,10 +589,10 @@ def effects_all(
         console.print("  Zoom effects applied")
 
         # Step 3: Emoji + SFX.
-        console.print("\n[bold cyan]Step 3/3:[/bold cyan] Adding emojis and sound effects...")
+        info("[bold]Step 3/3:[/bold] Adding emojis and sound effects...")
         enhancer = EmojiSFXEngine()
 
-        with console.status("[cyan]Enhancing...[/cyan]"):
+        with spinner("Enhancing..."):
             enhancer.auto_enhance(
                 video_path=zoomed_path,
                 word_timestamps=word_timestamps,
@@ -592,8 +603,10 @@ def effects_all(
 
         console.print("  Emojis and SFX added")
 
-    console.print(Panel.fit(
-        f"[green]Full effects pipeline complete![/green]\n\n"
-        f"  Output: [cyan]{final_output}[/cyan]",
-        title="Done",
+    console.print(result_panel(
+        "Done",
+        [
+            ("Status:", "Full effects pipeline complete!"),
+            ("Output:", str(final_output)),
+        ],
     ))
