@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from vidmation.models.base import Base, TimestampMixin, UUIDMixin
@@ -33,12 +33,26 @@ class User(Base, UUIDMixin, TimestampMixin):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    # Subscription
+    # Stripe / Subscription
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
     subscription_tier: Mapped[SubscriptionTier] = mapped_column(
         Enum(SubscriptionTier), default=SubscriptionTier.FREE, nullable=False
     )
+    subscription_status: Mapped[str] = mapped_column(
+        String(20), default="active", nullable=False
+    )
     subscription_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    # Usage tracking
+    videos_generated_this_month: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    monthly_video_limit: Mapped[int] = mapped_column(
+        Integer, default=3, nullable=False  # free tier default
     )
 
     # Tracking

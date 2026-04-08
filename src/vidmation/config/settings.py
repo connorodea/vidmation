@@ -68,6 +68,15 @@ class Settings(BaseSettings):
     instagram_account_id: str = ""
     public_base_url: str = ""  # for Instagram video hosting
 
+    # --- Stripe Billing ---
+    stripe_secret_key: SecretStr = SecretStr("")
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: SecretStr = SecretStr("")
+    stripe_price_pro_monthly: str = ""  # Stripe Price ID, e.g. price_xxx
+    stripe_price_pro_annual: str = ""
+    stripe_price_business_monthly: str = ""
+    stripe_price_business_annual: str = ""
+
     # --- JWT / Auth ---
     jwt_secret: SecretStr = SecretStr("change-me-in-production-use-openssl-rand")
     jwt_access_token_expire_minutes: int = 15
