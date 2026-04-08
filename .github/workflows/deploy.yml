@@ -31,8 +31,6 @@ jobs:
   deploy:
     needs: ci
     runs-on: ubuntu-latest
-    # Only deploy if Hetzner secrets are configured
-    if: ${{ secrets.HETZNER_CO_HOST != '' }}
     steps:
       - uses: actions/checkout@v4
 
