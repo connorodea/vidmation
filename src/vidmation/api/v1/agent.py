@@ -6,11 +6,13 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from vidmation.auth.dependencies import require_active_user
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
+from vidmation.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +157,7 @@ def _run_agent_create(
 async def create_video(
     request: AgentCreateRequest,
     background_tasks: BackgroundTasks,
+    user: User = Depends(require_active_user),
 ) -> AgentJobResponse:
     """Start AI-guided video creation (async).
 
@@ -190,7 +193,10 @@ async def create_video(
 
 
 @router.get("/status/{job_id}", response_model=AgentJobStatusResponse)
-async def get_job_status(job_id: str) -> AgentJobStatusResponse:
+async def get_job_status(
+    job_id: str,
+    user: User = Depends(require_active_user),
+) -> AgentJobStatusResponse:
     """Check the status of an agent creation job."""
     job = _agent_jobs.get(job_id)
     if job is None:
@@ -206,7 +212,10 @@ async def get_job_status(job_id: str) -> AgentJobStatusResponse:
 
 
 @router.post("/plan", response_model=AgentPlanResponse)
-async def plan_video(request: AgentPlanRequest) -> AgentPlanResponse:
+async def plan_video(
+    request: AgentPlanRequest,
+    user: User = Depends(require_active_user),
+) -> AgentPlanResponse:
     """Generate a production plan without executing it.
 
     Synchronous -- returns the plan text directly.
@@ -229,7 +238,10 @@ async def plan_video(request: AgentPlanRequest) -> AgentPlanResponse:
 
 
 @router.post("/review/{video_id}", response_model=AgentReviewResponse)
-async def review_video(video_id: str) -> AgentReviewResponse:
+async def review_video(
+    video_id: str,
+    user: User = Depends(require_active_user),
+) -> AgentReviewResponse:
     """AI reviews an existing video and suggests improvements."""
     import json
     from pathlib import Path

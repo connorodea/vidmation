@@ -1,4 +1,8 @@
-"""Video API endpoints — CRUD, batch creation, export."""
+"""Video API endpoints — multi-tenant CRUD, batch creation, export.
+
+All endpoints are scoped to the authenticated user's videos only.
+Supports both JWT auth (primary) and API key auth (legacy/programmatic).
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,8 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 
-from vidmation.api.auth import require_api_key
 from vidmation.api.v1.schemas import (
     BatchCreateRequest,
     BatchItemResponse,
@@ -22,10 +26,13 @@ from vidmation.api.v1.schemas import (
     VideoStatusResponse,
 )
 from vidmation.api.webhooks import WebhookManager
+from vidmation.auth.dependencies import require_active_user
 from vidmation.db.engine import get_session
 from vidmation.db.repos import ChannelRepo, JobRepo, VideoRepo
-from vidmation.models.job import JobStatus, JobType
-from vidmation.models.video import VideoFormat, VideoStatus
+from vidmation.models.channel import Channel
+from vidmation.models.job import Job, JobStatus, JobType
+from vidmation.models.user import User
+from vidmation.models.video import Video, VideoFormat, VideoStatus
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
@@ -43,14 +50,17 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 )
 async def create_video(
     body: VideoCreateRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Create a new video and enqueue a generation job."""
     session = get_session()
     try:
-        # Validate channel exists
-        channel_repo = ChannelRepo(session)
-        channel = channel_repo.get(body.channel_id)
+        # Validate channel exists and belongs to user
+        stmt = select(Channel).where(
+            Channel.id == body.channel_id,
+            Channel.user_id == user.id,
+        )
+        channel = session.scalars(stmt).first()
         if channel is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -61,6 +71,7 @@ async def create_video(
 
         video_repo = VideoRepo(session)
         video = video_repo.create(
+            user_id=user.id,
             channel_id=body.channel_id,
             topic_prompt=body.topic,
             format=video_format,
@@ -92,7 +103,7 @@ async def create_video(
 
 
 # ---------------------------------------------------------------------------
-# GET /videos — paginated list with optional filters
+# GET /videos — paginated list with optional filters (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -105,15 +116,16 @@ async def list_videos(
     per_page: int = Query(20, ge=1, le=100),
     channel_id: str | None = Query(None),
     status_filter: str | None = Query(None, alias="status"),
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
-    """List videos with pagination and optional filters."""
+    """List videos with pagination and optional filters (user-scoped)."""
     session = get_session()
     try:
-        from sqlalchemy import func, select
-        from vidmation.models.video import Video
-
-        stmt = select(Video).order_by(Video.created_at.desc())
+        stmt = (
+            select(Video)
+            .where(Video.user_id == user.id)
+            .order_by(Video.created_at.desc())
+        )
 
         if channel_id:
             stmt = stmt.where(Video.channel_id == channel_id)
@@ -143,7 +155,7 @@ async def list_videos(
 
 
 # ---------------------------------------------------------------------------
-# GET /videos/{id} — single video detail
+# GET /videos/{id} — single video detail (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -154,22 +166,19 @@ async def list_videos(
 )
 async def get_video(
     video_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Get full details for a single video."""
     session = get_session()
     try:
-        video_repo = VideoRepo(session)
-        video = video_repo.get(video_id)
-        if video is None:
-            raise HTTPException(status_code=404, detail="Video not found")
+        video = _get_user_video(session, video_id, user.id)
         return VideoResponse.model_validate(video)
     finally:
         session.close()
 
 
 # ---------------------------------------------------------------------------
-# GET /videos/{id}/status — lightweight status check
+# GET /videos/{id}/status — lightweight status check (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -180,18 +189,12 @@ async def get_video(
 )
 async def get_video_status(
     video_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Get the generation status for a video (lightweight)."""
     session = get_session()
     try:
-        from sqlalchemy import select
-        from vidmation.models.job import Job
-
-        video_repo = VideoRepo(session)
-        video = video_repo.get(video_id)
-        if video is None:
-            raise HTTPException(status_code=404, detail="Video not found")
+        video = _get_user_video(session, video_id, user.id)
 
         # Find the most recent job for this video
         stmt = (
@@ -214,7 +217,7 @@ async def get_video_status(
 
 
 # ---------------------------------------------------------------------------
-# DELETE /videos/{id}
+# DELETE /videos/{id} (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -225,18 +228,14 @@ async def get_video_status(
 )
 async def delete_video(
     video_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Delete a video and its associated jobs."""
     session = get_session()
     try:
         from sqlalchemy import delete as sql_delete
-        from vidmation.models.job import Job
 
-        video_repo = VideoRepo(session)
-        video = video_repo.get(video_id)
-        if video is None:
-            raise HTTPException(status_code=404, detail="Video not found")
+        video = _get_user_video(session, video_id, user.id)
 
         # Delete associated jobs first
         session.execute(sql_delete(Job).where(Job.video_id == video_id))
@@ -248,7 +247,7 @@ async def delete_video(
 
 
 # ---------------------------------------------------------------------------
-# POST /videos/batch — bulk create from topic list
+# POST /videos/batch — bulk create from topic list (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -260,13 +259,17 @@ async def delete_video(
 )
 async def batch_create_videos(
     body: BatchCreateRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Create multiple videos from a list of topics."""
     session = get_session()
     try:
-        channel_repo = ChannelRepo(session)
-        channel = channel_repo.get(body.channel_id)
+        # Validate channel belongs to user
+        stmt = select(Channel).where(
+            Channel.id == body.channel_id,
+            Channel.user_id == user.id,
+        )
+        channel = session.scalars(stmt).first()
         if channel is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -281,6 +284,7 @@ async def batch_create_videos(
 
         for topic in body.topics:
             video = video_repo.create(
+                user_id=user.id,
                 channel_id=body.channel_id,
                 topic_prompt=topic,
                 format=video_format,
@@ -312,7 +316,7 @@ async def batch_create_videos(
 
 
 # ---------------------------------------------------------------------------
-# POST /videos/{id}/export — export to platform
+# POST /videos/{id}/export — export to platform (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -324,15 +328,12 @@ async def batch_create_videos(
 async def export_video(
     video_id: str,
     body: VideoExportRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Export a completed video to a platform (e.g. YouTube)."""
     session = get_session()
     try:
-        video_repo = VideoRepo(session)
-        video = video_repo.get(video_id)
-        if video is None:
-            raise HTTPException(status_code=404, detail="Video not found")
+        video = _get_user_video(session, video_id, user.id)
 
         if video.status != VideoStatus.READY:
             raise HTTPException(
@@ -358,3 +359,23 @@ async def export_video(
 
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_user_video(session, video_id: str, user_id: str) -> Video:
+    """Load a video and verify it belongs to the given user.
+
+    Raises 404 if the video doesn't exist or doesn't belong to the user.
+    """
+    stmt = select(Video).where(
+        Video.id == video_id,
+        Video.user_id == user_id,
+    )
+    video = session.scalars(stmt).first()
+    if video is None:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return video

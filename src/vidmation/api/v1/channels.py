@@ -1,21 +1,31 @@
-"""Channel API endpoints — CRUD for YouTube channel configurations."""
+"""Channel API endpoints — multi-tenant CRUD for YouTube channel configurations.
+
+All endpoints are scoped to the authenticated user's channels only.
+"""
 
 from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
-from vidmation.api.auth import require_api_key
 from vidmation.api.v1.schemas import (
     ChannelCreateRequest,
     ChannelResponse,
     ChannelUpdateRequest,
     ErrorResponse,
     PaginatedResponse,
+    YouTubeConnectResponse,
 )
+from vidmation.auth.dependencies import require_active_user
 from vidmation.db.engine import get_session
-from vidmation.db.repos import ChannelRepo
 from vidmation.models.channel import Channel
+from vidmation.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/channels", tags=["channels"])
 
@@ -33,27 +43,34 @@ router = APIRouter(prefix="/channels", tags=["channels"])
 )
 async def create_channel(
     body: ChannelCreateRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
-    """Create a new channel configuration."""
+    """Create a new channel configuration owned by the current user."""
     session = get_session()
     try:
-        channel_repo = ChannelRepo(session)
-
-        # Check for duplicate name
-        existing = channel_repo.get_by_name(body.name)
+        # Check for duplicate name within this user's channels
+        stmt = select(Channel).where(
+            Channel.user_id == user.id,
+            Channel.name == body.name,
+        )
+        existing = session.scalars(stmt).first()
         if existing is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Channel with name '{body.name}' already exists",
+                detail=f"You already have a channel named '{body.name}'",
             )
 
-        channel = channel_repo.create(
+        channel = Channel(
+            user_id=user.id,
             name=body.name,
             youtube_channel_id=body.youtube_channel_id,
             profile_path=body.profile_path,
             is_active=body.is_active,
         )
+        session.add(channel)
+        session.commit()
+        session.refresh(channel)
+
         return ChannelResponse.model_validate(channel)
 
     finally:
@@ -61,7 +78,7 @@ async def create_channel(
 
 
 # ---------------------------------------------------------------------------
-# GET /channels — paginated list
+# GET /channels — paginated list (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -73,12 +90,16 @@ async def list_channels(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     active_only: bool = Query(True),
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
-    """List all channels with pagination."""
+    """List all channels belonging to the current user."""
     session = get_session()
     try:
-        stmt = select(Channel).order_by(Channel.created_at.desc())
+        stmt = (
+            select(Channel)
+            .where(Channel.user_id == user.id)
+            .order_by(Channel.created_at.desc())
+        )
         if active_only:
             stmt = stmt.where(Channel.is_active.is_(True))
 
@@ -103,7 +124,7 @@ async def list_channels(
 
 
 # ---------------------------------------------------------------------------
-# GET /channels/{id} — channel detail
+# GET /channels/{id} — channel detail (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -114,22 +135,19 @@ async def list_channels(
 )
 async def get_channel(
     channel_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
-    """Get full details for a single channel."""
+    """Get full details for a single channel, including YouTube connection status."""
     session = get_session()
     try:
-        channel_repo = ChannelRepo(session)
-        channel = channel_repo.get(channel_id)
-        if channel is None:
-            raise HTTPException(status_code=404, detail="Channel not found")
+        channel = _get_user_channel(session, channel_id, user.id)
         return ChannelResponse.model_validate(channel)
     finally:
         session.close()
 
 
 # ---------------------------------------------------------------------------
-# PUT /channels/{id} — update channel
+# PUT /channels/{id} — update channel (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -141,24 +159,25 @@ async def get_channel(
 async def update_channel(
     channel_id: str,
     body: ChannelUpdateRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Update an existing channel's configuration."""
     session = get_session()
     try:
-        channel = session.get(Channel, channel_id)
-        if channel is None:
-            raise HTTPException(status_code=404, detail="Channel not found")
+        channel = _get_user_channel(session, channel_id, user.id)
 
         update_data = body.model_dump(exclude_unset=True)
 
-        # Duplicate-name guard
+        # Duplicate-name guard within user's channels
         if "name" in update_data and update_data["name"] != channel.name:
-            channel_repo = ChannelRepo(session)
-            if channel_repo.get_by_name(update_data["name"]) is not None:
+            stmt = select(Channel).where(
+                Channel.user_id == user.id,
+                Channel.name == update_data["name"],
+            )
+            if session.scalars(stmt).first() is not None:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Channel with name '{update_data['name']}' already exists",
+                    detail=f"You already have a channel named '{update_data['name']}'",
                 )
 
         for key, value in update_data.items():
@@ -173,7 +192,89 @@ async def update_channel(
 
 
 # ---------------------------------------------------------------------------
-# DELETE /channels/{id}
+# POST /channels/{id}/connect-youtube — initiate YouTube OAuth
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{channel_id}/connect-youtube",
+    response_model=YouTubeConnectResponse,
+    responses={404: {"model": ErrorResponse}},
+)
+async def connect_youtube(
+    channel_id: str,
+    user: User = Depends(require_active_user),
+):
+    """Initiate the YouTube OAuth flow for a channel.
+
+    Returns an authorization URL that the user should open in their browser
+    to grant YouTube access. After authorization, the OAuth callback will
+    store the credentials on the channel.
+    """
+    session = get_session()
+    try:
+        channel = _get_user_channel(session, channel_id, user.id)
+
+        try:
+            from google_auth_oauthlib.flow import Flow
+
+            from vidmation.config.settings import get_settings
+
+            settings = get_settings()
+
+            # Look for client_secret file in the data directory
+            client_secret_path = settings.data_dir / "client_secret.json"
+            if not client_secret_path.exists():
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail=(
+                        "YouTube OAuth not configured. Place a client_secret.json "
+                        "file in the data directory."
+                    ),
+                )
+
+            scopes = [
+                "https://www.googleapis.com/auth/youtube.upload",
+                "https://www.googleapis.com/auth/youtube",
+                "https://www.googleapis.com/auth/youtube.force-ssl",
+            ]
+
+            redirect_uri = (
+                f"{settings.public_base_url}/api/v1/channels/{channel_id}/youtube-callback"
+                if settings.public_base_url
+                else f"http://localhost:{settings.web_port}/api/v1/channels/{channel_id}/youtube-callback"
+            )
+
+            flow = Flow.from_client_secrets_file(
+                str(client_secret_path),
+                scopes=scopes,
+                redirect_uri=redirect_uri,
+            )
+
+            auth_url, _ = flow.authorization_url(
+                access_type="offline",
+                include_granted_scopes="true",
+                prompt="consent",
+                state=channel.id,
+            )
+
+            return YouTubeConnectResponse(
+                auth_url=auth_url,
+                channel_id=channel.id,
+            )
+
+        except ImportError:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="YouTube OAuth libraries not installed (google-auth-oauthlib)",
+            )
+
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# DELETE /channels/{id} — soft delete (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -184,17 +285,33 @@ async def update_channel(
 )
 async def delete_channel(
     channel_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Soft-delete a channel by deactivating it."""
     session = get_session()
     try:
-        channel = session.get(Channel, channel_id)
-        if channel is None:
-            raise HTTPException(status_code=404, detail="Channel not found")
-
+        channel = _get_user_channel(session, channel_id, user.id)
         channel.is_active = False
         session.commit()
-
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_user_channel(session, channel_id: str, user_id: str) -> Channel:
+    """Load a channel and verify it belongs to the given user.
+
+    Raises 404 if the channel doesn't exist or doesn't belong to the user.
+    """
+    stmt = select(Channel).where(
+        Channel.id == channel_id,
+        Channel.user_id == user_id,
+    )
+    channel = session.scalars(stmt).first()
+    if channel is None:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    return channel

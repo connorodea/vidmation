@@ -536,8 +536,17 @@ def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
     Uses AI-generated metadata (title, description with chapters, tags)
     when available, and uploads companion SRT captions if present.
     Supports scheduled publishing via the channel profile.
+
+    Credential resolution order:
+    1. Per-channel OAuth token stored in the channel's DB record
+       (multi-channel SaaS mode).
+    2. Global token file at ``data/youtube_token.json`` (legacy single-
+       channel mode).
     """
-    from vidmation.services.youtube.auth import get_credentials
+    from vidmation.services.youtube.auth import (
+        get_credentials,
+        get_credentials_for_channel,
+    )
     from vidmation.services.youtube.uploader import YouTubeUploader
 
     if ctx.final_video_path is None:
@@ -547,22 +556,56 @@ def stage_upload(ctx: PipelineContext, settings: Settings) -> None:
 
     logger.info("[upload] Uploading video to YouTube")
 
-    # Resolve OAuth credentials
-    token_path = settings.data_dir / "youtube_token.json"
+    # Resolve OAuth credentials — prefer per-channel DB token, then
+    # fall back to the legacy global token file.
     client_secret_path = settings.data_dir / "client_secret.json"
+    credentials = None
 
-    if not token_path.exists():
-        logger.warning(
-            "[upload] YouTube token not found at %s — skipping upload. "
-            "Run 'vidmation youtube setup' to configure.",
-            token_path,
+    # Try per-channel credentials (multi-channel SaaS mode)
+    channel_id = getattr(ctx, "channel_id", None)
+    if channel_id:
+        try:
+            from vidmation.db.engine import get_session
+            from vidmation.db.repos import ChannelRepo
+
+            session = get_session()
+            repo = ChannelRepo(session)
+            channel = repo.get(channel_id)
+            session.close()
+
+            if channel and channel.oauth_token_json:
+                credentials = get_credentials_for_channel(
+                    channel_id=channel_id,
+                    client_secret_path=client_secret_path,
+                )
+                logger.info(
+                    "[upload] Using per-channel credentials for %s",
+                    channel.name,
+                )
+        except Exception as exc:
+            logger.warning(
+                "[upload] Could not load per-channel credentials (%s); "
+                "falling back to global token",
+                exc,
+            )
+            credentials = None
+
+    # Fall back to global token file
+    if credentials is None:
+        token_path = settings.data_dir / "youtube_token.json"
+
+        if not token_path.exists():
+            logger.warning(
+                "[upload] YouTube token not found at %s — skipping upload. "
+                "Run 'vidmation youtube setup' to configure.",
+                token_path,
+            )
+            return
+
+        credentials = get_credentials(
+            token_path=token_path,
+            client_secret_path=client_secret_path,
         )
-        return
-
-    credentials = get_credentials(
-        token_path=token_path,
-        client_secret_path=client_secret_path,
-    )
 
     uploader = YouTubeUploader(credentials=credentials)
     yt_config = ctx.channel_profile.youtube

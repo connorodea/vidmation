@@ -1,4 +1,7 @@
-"""Job API endpoints — list, detail, cancel, retry, and logs."""
+"""Job API endpoints — multi-tenant list, detail, cancel, retry, and logs.
+
+Jobs are scoped to the authenticated user by joining through the video's user_id.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +10,6 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
-from vidmation.api.auth import require_api_key
 from vidmation.api.v1.schemas import (
     ErrorResponse,
     JobListResponse,
@@ -16,16 +18,18 @@ from vidmation.api.v1.schemas import (
     JobProgressResponse,
     JobResponse,
 )
+from vidmation.auth.dependencies import require_active_user
 from vidmation.db.engine import get_session
 from vidmation.db.repos import JobRepo, VideoRepo
 from vidmation.models.job import Job, JobStatus, JobType
-from vidmation.models.video import VideoStatus
+from vidmation.models.user import User
+from vidmation.models.video import Video, VideoStatus
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 # ---------------------------------------------------------------------------
-# GET /jobs — paginated list
+# GET /jobs — paginated list (user-scoped via video ownership)
 # ---------------------------------------------------------------------------
 
 
@@ -39,12 +43,18 @@ async def list_jobs(
     status_filter: str | None = Query(None, alias="status"),
     video_id: str | None = Query(None),
     job_type: str | None = Query(None),
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
-    """List jobs with pagination and optional filters."""
+    """List jobs with pagination and optional filters (user-scoped)."""
     session = get_session()
     try:
-        stmt = select(Job).order_by(Job.created_at.desc())
+        # Join through Video to scope by user
+        stmt = (
+            select(Job)
+            .join(Video, Job.video_id == Video.id)
+            .where(Video.user_id == user.id)
+            .order_by(Job.created_at.desc())
+        )
 
         if status_filter:
             stmt = stmt.where(Job.status == JobStatus(status_filter))
@@ -74,7 +84,7 @@ async def list_jobs(
 
 
 # ---------------------------------------------------------------------------
-# GET /jobs/{id} — job detail with progress
+# GET /jobs/{id} — job detail with progress (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -85,22 +95,19 @@ async def list_jobs(
 )
 async def get_job(
     job_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Get full details and progress for a single job."""
     session = get_session()
     try:
-        job_repo = JobRepo(session)
-        job = job_repo.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+        job = _get_user_job(session, job_id, user.id)
         return JobResponse.model_validate(job)
     finally:
         session.close()
 
 
 # ---------------------------------------------------------------------------
-# POST /jobs/{id}/cancel
+# POST /jobs/{id}/cancel (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -111,15 +118,12 @@ async def get_job(
 )
 async def cancel_job(
     job_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Cancel a queued or running job."""
     session = get_session()
     try:
-        job_repo = JobRepo(session)
-        job = job_repo.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+        job = _get_user_job(session, job_id, user.id)
 
         if job.status not in (JobStatus.QUEUED, JobStatus.RUNNING):
             raise HTTPException(
@@ -146,7 +150,7 @@ async def cancel_job(
 
 
 # ---------------------------------------------------------------------------
-# POST /jobs/{id}/retry
+# POST /jobs/{id}/retry (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -158,15 +162,12 @@ async def cancel_job(
 )
 async def retry_job(
     job_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Retry a failed or cancelled job, creating a new job record."""
     session = get_session()
     try:
-        job_repo = JobRepo(session)
-        original = job_repo.get(job_id)
-        if original is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+        original = _get_user_job(session, job_id, user.id)
 
         if original.status not in (JobStatus.FAILED, JobStatus.CANCELLED):
             raise HTTPException(
@@ -174,6 +175,7 @@ async def retry_job(
                 detail=f"Only FAILED or CANCELLED jobs can be retried (current: {original.status.value})",
             )
 
+        job_repo = JobRepo(session)
         new_job = job_repo.create(
             video_id=original.video_id,
             job_type=original.job_type,
@@ -192,7 +194,7 @@ async def retry_job(
 
 
 # ---------------------------------------------------------------------------
-# GET /jobs/{id}/logs — job execution logs
+# GET /jobs/{id}/logs — job execution logs (user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -203,7 +205,7 @@ async def retry_job(
 )
 async def get_job_logs(
     job_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Get execution logs for a job.
 
@@ -212,10 +214,7 @@ async def get_job_logs(
     """
     session = get_session()
     try:
-        job_repo = JobRepo(session)
-        job = job_repo.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+        job = _get_user_job(session, job_id, user.id)
 
         # Build a synthetic log from available metadata
         logs: list[JobLogEntry] = []
@@ -279,3 +278,27 @@ async def get_job_logs(
 
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_user_job(session, job_id: str, user_id: str) -> Job:
+    """Load a job and verify it belongs to a video owned by the given user.
+
+    Raises 404 if the job doesn't exist or the associated video isn't owned by the user.
+    """
+    stmt = (
+        select(Job)
+        .join(Video, Job.video_id == Video.id)
+        .where(
+            Job.id == job_id,
+            Video.user_id == user_id,
+        )
+    )
+    job = session.scalars(stmt).first()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job

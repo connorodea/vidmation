@@ -6,7 +6,7 @@ import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, Enum, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from vidmation.models.base import Base, TimestampMixin, UUIDMixin
 
@@ -68,6 +68,10 @@ class User(Base, UUIDMixin, TimestampMixin):
     # Google OAuth (stub for later)
     google_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    channels: Mapped[list["Channel"]] = relationship(back_populates="owner")  # noqa: F821
+    videos: Mapped[list["Video"]] = relationship()  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<User {self.email!r} ({self.id[:8]})>"

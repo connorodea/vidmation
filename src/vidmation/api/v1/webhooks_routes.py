@@ -1,10 +1,12 @@
-"""Webhook management API — register, list, delete, and test webhooks."""
+"""Webhook management API — register, list, delete, and test webhooks.
+
+All endpoints require JWT authentication.
+"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from vidmation.api.auth import require_api_key
 from vidmation.api.v1.schemas import (
     ErrorResponse,
     WebhookCreateRequest,
@@ -12,7 +14,9 @@ from vidmation.api.v1.schemas import (
     WebhookTestResponse,
 )
 from vidmation.api.webhooks import WebhookManager
+from vidmation.auth.dependencies import require_active_user
 from vidmation.db.engine import get_session
+from vidmation.models.user import User
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -30,7 +34,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 )
 async def register_webhook(
     body: WebhookCreateRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Register a new webhook endpoint to receive event notifications."""
     session = get_session()
@@ -65,7 +69,7 @@ async def register_webhook(
     response_model=list[WebhookResponse],
 )
 async def list_webhooks(
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """List all registered webhooks."""
     session = get_session()
@@ -89,7 +93,7 @@ async def list_webhooks(
 )
 async def delete_webhook(
     webhook_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Delete a registered webhook."""
     session = get_session()
@@ -113,7 +117,7 @@ async def delete_webhook(
 )
 async def test_webhook(
     webhook_id: str,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Send a test event to a webhook endpoint to verify connectivity."""
     session = get_session()

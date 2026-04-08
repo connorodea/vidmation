@@ -1,12 +1,15 @@
-"""Direct generation endpoints — script, voiceover, thumbnail, full video."""
+"""Direct generation endpoints — script, voiceover, thumbnail, full video.
+
+All endpoints require JWT authentication and scope data to the authenticated user.
+"""
 
 from __future__ import annotations
 
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 
-from vidmation.api.auth import require_api_key
 from vidmation.api.v1.schemas import (
     ErrorResponse,
     GenerateScriptRequest,
@@ -19,9 +22,12 @@ from vidmation.api.v1.schemas import (
     VoiceoverResponse,
 )
 from vidmation.api.webhooks import WebhookManager
+from vidmation.auth.dependencies import require_active_user
 from vidmation.db.engine import get_session
-from vidmation.db.repos import ChannelRepo, JobRepo, VideoRepo
+from vidmation.db.repos import JobRepo, VideoRepo
+from vidmation.models.channel import Channel
 from vidmation.models.job import JobStatus, JobType
+from vidmation.models.user import User
 from vidmation.models.video import VideoFormat, VideoStatus
 
 logger = logging.getLogger(__name__)
@@ -41,7 +47,7 @@ router = APIRouter(prefix="/generate", tags=["generate"])
 )
 async def generate_script(
     body: GenerateScriptRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Generate a video script from a topic. Returns structured script JSON.
 
@@ -60,11 +66,14 @@ async def generate_script(
     try:
         session = get_session()
         try:
-            # Resolve channel profile for style context (optional)
+            # Resolve channel profile for style context (optional, user-scoped)
             profile = None
             if body.channel_id:
-                channel_repo = ChannelRepo(session)
-                channel = channel_repo.get(body.channel_id)
+                stmt = select(Channel).where(
+                    Channel.id == body.channel_id,
+                    Channel.user_id == user.id,
+                )
+                channel = session.scalars(stmt).first()
                 if channel:
                     try:
                         from vidmation.config.profiles import load_profile
@@ -116,7 +125,7 @@ async def generate_script(
 )
 async def generate_voiceover(
     body: GenerateVoiceoverRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Generate a voiceover audio file from text using TTS."""
     try:
@@ -163,7 +172,7 @@ async def generate_voiceover(
 )
 async def generate_thumbnail(
     body: GenerateThumbnailRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Generate a thumbnail image from a text prompt."""
     try:
@@ -200,7 +209,7 @@ async def generate_thumbnail(
 
 
 # ---------------------------------------------------------------------------
-# POST /generate/video — full async pipeline (returns job_id)
+# POST /generate/video — full async pipeline (returns job_id, user-scoped)
 # ---------------------------------------------------------------------------
 
 
@@ -212,7 +221,7 @@ async def generate_thumbnail(
 )
 async def generate_video(
     body: GenerateVideoRequest,
-    api_key_id: str = Depends(require_api_key),
+    user: User = Depends(require_active_user),
 ):
     """Kick off the full video generation pipeline asynchronously.
 
@@ -221,9 +230,12 @@ async def generate_video(
     """
     session = get_session()
     try:
-        # Validate channel
-        channel_repo = ChannelRepo(session)
-        channel = channel_repo.get(body.channel_id)
+        # Validate channel belongs to user
+        stmt = select(Channel).where(
+            Channel.id == body.channel_id,
+            Channel.user_id == user.id,
+        )
+        channel = session.scalars(stmt).first()
         if channel is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -234,6 +246,7 @@ async def generate_video(
 
         video_repo = VideoRepo(session)
         video = video_repo.create(
+            user_id=user.id,
             channel_id=body.channel_id,
             topic_prompt=body.topic,
             format=video_format,

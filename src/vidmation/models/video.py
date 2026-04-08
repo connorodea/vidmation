@@ -28,6 +28,9 @@ class VideoStatus(str, enum.Enum):
 class Video(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "videos"
 
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True, index=True
+    )
     channel_id: Mapped[str] = mapped_column(String(36), ForeignKey("channels.id"))
     title: Mapped[str] = mapped_column(String(500), default="")
     description: Mapped[str] = mapped_column(Text, default="")

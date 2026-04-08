@@ -26,6 +26,9 @@ class PipelineContext:
     format: VideoFormat
     work_dir: Path
 
+    # --- Channel linkage (multi-channel SaaS) ---
+    channel_id: str | None = None  # DB Channel UUID for per-channel OAuth
+
     # --- Accumulated during pipeline ---
     script: dict | None = None
     voiceover_path: Path | None = None

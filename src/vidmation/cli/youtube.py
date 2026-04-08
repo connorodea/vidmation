@@ -35,11 +35,22 @@ youtube_app = typer.Typer(no_args_is_help=True)
 # ---------------------------------------------------------------------------
 
 @youtube_app.command("setup")
-def youtube_setup() -> None:
+def youtube_setup(
+    channel: Optional[str] = typer.Option(
+        None,
+        "--channel",
+        "-c",
+        help="Channel name to connect (stores token in DB instead of a file).",
+    ),
+) -> None:
     """Set up YouTube API credentials (interactive).
 
     Guides you through placing the client_secret.json file and
     running the OAuth consent flow.
+
+    With ``--channel``, the OAuth token is stored in the channel's
+    database record so multiple channels can each have their own
+    YouTube connection.
     """
     settings = get_settings()
     data_dir = settings.data_dir
@@ -74,6 +85,17 @@ def youtube_setup() -> None:
             error(f"File not found at {client_secret_path}")
             raise typer.Exit(1)
 
+    # ------------------------------------------------------------------
+    # Per-channel flow: store token in the channel's DB record
+    # ------------------------------------------------------------------
+    if channel:
+        _youtube_setup_for_channel(channel, client_secret_path, settings)
+        return
+
+    # ------------------------------------------------------------------
+    # Legacy global flow: store token as a flat file
+    # ------------------------------------------------------------------
+
     # Step 2: Run OAuth flow
     if token_path.exists():
         success(f"Found existing token at {token_path}")
@@ -100,19 +122,18 @@ def youtube_setup() -> None:
     step(3, "Verifying access...")
 
     try:
-        from googleapiclient.discovery import build
+        from vidmation.services.youtube.auth import fetch_youtube_channel_info
 
-        service = build("youtube", "v3", credentials=creds, cache_discovery=False)
-        response = service.channels().list(part="snippet", mine=True).execute()
-        channels = response.get("items", [])
+        ch_info = fetch_youtube_channel_info(creds)
 
-        if channels:
-            ch = channels[0]["snippet"]
+        if ch_info:
             console.print(result_panel(
                 "YouTube Setup Complete",
                 [
-                    ("Channel:", ch["title"]),
-                    ("ID:", f"[id]{channels[0]['id']}[/id]"),
+                    ("Channel:", ch_info["title"]),
+                    ("ID:", f"[id]{ch_info['id']}[/id]"),
+                    ("Subscribers:", f"{ch_info['subscriber_count']:,}"),
+                    ("Videos:", f"{ch_info['video_count']:,}"),
                     ("Token:", f"[path]{token_path}[/path]"),
                 ],
             ))
@@ -121,6 +142,86 @@ def youtube_setup() -> None:
     except Exception as exc:
         warning(f"Could not verify channel: {exc}")
         success("Token saved. You can try uploading to verify.")
+
+
+def _youtube_setup_for_channel(
+    channel_name: str,
+    client_secret_path: Path,
+    settings: "Settings",
+) -> None:
+    """Run per-channel OAuth setup and store token in the DB."""
+    from vidmation.db.repos import ChannelRepo
+    from vidmation.services.youtube.auth import (
+        fetch_youtube_channel_info,
+        get_credentials_for_channel,
+    )
+
+    init_db()
+    session = get_session()
+
+    try:
+        repo = ChannelRepo(session)
+        channel_record = repo.get_by_name(channel_name)
+
+        if channel_record is None:
+            error(
+                f"Channel '{channel_name}' not found in the database.\n"
+                f"Create it first with: [bold]vidmation channel add --name {channel_name}[/bold]"
+            )
+            raise typer.Exit(1)
+
+        # Check for existing connection
+        if channel_record.is_youtube_connected:
+            info(f"Channel '{channel_name}' is already connected to YouTube.")
+            reauth = typer.confirm("Re-authenticate?", default=False)
+            if not reauth:
+                success("Setup complete! Channel credentials are ready.")
+                return
+
+        step(2, f"Authenticating channel '{channel_name}' with YouTube...")
+        info("A browser window will open for Google sign-in.")
+
+        creds = get_credentials_for_channel(
+            channel_id=channel_record.id,
+            client_secret_path=client_secret_path,
+        )
+
+        # Step 3: Fetch YouTube channel info and update the record
+        step(3, "Fetching YouTube channel info...")
+
+        try:
+            ch_info = fetch_youtube_channel_info(creds)
+
+            if ch_info:
+                # Re-fetch channel record in this session (the auth function
+                # used a separate session so our object is still valid).
+                channel_record.youtube_channel_id = ch_info["id"]
+                channel_record.youtube_channel_title = ch_info["title"]
+                session.commit()
+
+                console.print(result_panel(
+                    f"Channel '{channel_name}' Connected",
+                    [
+                        ("YouTube Channel:", ch_info["title"]),
+                        ("YouTube ID:", f"[id]{ch_info['id']}[/id]"),
+                        ("Subscribers:", f"{ch_info['subscriber_count']:,}"),
+                        ("Videos:", f"{ch_info['video_count']:,}"),
+                    ],
+                ))
+            else:
+                warning("No YouTube channels found for this Google account.")
+                success("Token saved. You can try uploading to verify.")
+        except Exception as exc:
+            warning(f"Could not fetch channel info: {exc}")
+            success("Token saved to channel record. You can try uploading to verify.")
+
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        error(f"OAuth setup failed: {exc}")
+        raise typer.Exit(1)
+    finally:
+        session.close()
 
 
 # ---------------------------------------------------------------------------

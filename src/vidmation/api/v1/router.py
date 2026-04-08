@@ -8,6 +8,7 @@ from vidmation.api.v1.agent import router as agent_router
 from vidmation.api.v1.channels import router as channels_router
 from vidmation.api.v1.generate import router as generate_router
 from vidmation.api.v1.jobs import router as jobs_router
+from vidmation.api.v1.publish import router as publish_router
 from vidmation.api.v1.videos import router as videos_router
 from vidmation.api.v1.webhooks_routes import router as webhooks_router
 
@@ -19,6 +20,7 @@ router.include_router(videos_router)
 router.include_router(channels_router)
 router.include_router(jobs_router)
 router.include_router(generate_router)
+router.include_router(publish_router)
 router.include_router(webhooks_router)
 
 

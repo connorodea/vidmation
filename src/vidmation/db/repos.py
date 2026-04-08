@@ -34,6 +34,39 @@ class ChannelRepo:
             stmt = stmt.where(Channel.is_active.is_(True))
         return list(self.session.scalars(stmt).all())
 
+    def list_youtube_connected(self, active_only: bool = True) -> list[Channel]:
+        """Return all channels that have a stored YouTube OAuth token."""
+        stmt = (
+            select(Channel)
+            .where(Channel.oauth_token_json.isnot(None))
+            .order_by(Channel.created_at.desc())
+        )
+        if active_only:
+            stmt = stmt.where(Channel.is_active.is_(True))
+        return list(self.session.scalars(stmt).all())
+
+    def update_youtube_info(
+        self,
+        channel_id: str,
+        *,
+        youtube_channel_id: str | None = None,
+        youtube_channel_title: str | None = None,
+        oauth_token_json: str | None = None,
+    ) -> Channel | None:
+        """Update YouTube-related fields on a channel record."""
+        channel = self.get(channel_id)
+        if channel is None:
+            return None
+        if youtube_channel_id is not None:
+            channel.youtube_channel_id = youtube_channel_id
+        if youtube_channel_title is not None:
+            channel.youtube_channel_title = youtube_channel_title
+        if oauth_token_json is not None:
+            channel.oauth_token_json = oauth_token_json
+        self.session.commit()
+        self.session.refresh(channel)
+        return channel
+
 
 class VideoRepo:
     def __init__(self, session: Session):

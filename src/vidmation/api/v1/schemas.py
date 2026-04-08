@@ -66,10 +66,13 @@ class ChannelResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    user_id: str
     name: str
     youtube_channel_id: str | None = None
+    youtube_channel_title: str | None = None
     profile_path: str
     is_active: bool
+    is_youtube_connected: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -92,6 +95,7 @@ class VideoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    user_id: str
     channel_id: str
     title: str
     description: str
@@ -343,3 +347,48 @@ class APIKeyResponse(BaseModel):
     rate_limit_per_minute: int
     last_used_at: datetime | None = None
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Publish schemas
+# ---------------------------------------------------------------------------
+
+
+class PublishRequest(BaseModel):
+    """Request body for publishing a video to one or more platforms."""
+
+    video_id: str | None = Field(None, description="ID of an existing video to publish")
+    video_path: str | None = Field(None, description="File path to a generated video")
+    channel_id: str | None = Field(None, description="Channel ID to publish from")
+    channel_name: str | None = Field(None, description="Channel name to publish from (alternative to channel_id)")
+    title: str | None = Field(None, description="Video title (AI-generated if omitted)")
+    description: str | None = Field(None, description="Video description (AI-generated if omitted)")
+    tags: list[str] | None = Field(None, description="Video tags (AI-generated if omitted)")
+    schedule: str | None = Field(
+        None,
+        description="ISO datetime or relative time (e.g. '+2h') to schedule publish",
+    )
+    platforms: list[str] = Field(
+        default_factory=lambda: ["youtube"],
+        description="Target platforms: youtube, tiktok, instagram",
+    )
+
+
+class PublishResponse(BaseModel):
+    """Response from a successful publish request."""
+
+    video_id: str
+    channel_id: str
+    youtube_video_id: str | None = None
+    youtube_url: str | None = None
+    platforms: list[str]
+    status: str = Field(description="'published', 'scheduled', or 'queued'")
+    scheduled_at: datetime | None = None
+    job_id: str | None = None
+
+
+class YouTubeConnectResponse(BaseModel):
+    """Response containing the YouTube OAuth authorization URL."""
+
+    auth_url: str
+    channel_id: str
