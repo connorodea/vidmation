@@ -79,6 +79,9 @@ dependencies = [
     "PyJWT>=2.8",
     "email-validator>=2.0",
 
+    # Billing
+    "stripe>=8.0",
+
     # Utils
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
