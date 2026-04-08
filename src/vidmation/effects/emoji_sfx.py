@@ -11,12 +11,12 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import ffmpeg
 
 from vidmation.config.settings import Settings, get_settings
-from vidmation.utils.ffmpeg import FFmpegError, get_duration, get_resolution, run_ffmpeg
+from vidmation.utils.ffmpeg import FFmpegError, get_resolution, run_ffmpeg
 from vidmation.utils.retry import retry
 
 if TYPE_CHECKING:
@@ -88,7 +88,7 @@ class EmojiSFXEngine:
         # Surprise & Shock
         "wow": "\U0001f631", "shocked": "\U0001f631", "crazy": "\U0001f92f",
         "mind": "\U0001f92f", "unbelievable": "\U0001f631", "surprise": "\U0001f631",
-        "mindblowing": "\U0001f92f", "insane": "\U0001f92f",
+        "mindblowing": "\U0001f92f",
         # Humor
         "laugh": "\U0001f602", "funny": "\U0001f602", "joke": "\U0001f602",
         "hilarious": "\U0001f923", "lol": "\U0001f602",

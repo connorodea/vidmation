@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 import anthropic
 
-from vidmation.audio_first.segmenter import AudioSegmenter, AudioSegment
+from vidmation.audio_first.segmenter import AudioSegmenter
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import Settings, get_settings
 from vidmation.services.captions.whisper import WhisperCaptionGenerator

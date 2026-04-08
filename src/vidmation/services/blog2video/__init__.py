@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from vidmation.services.blog2video.scraper import BlogScraper
 from vidmation.services.blog2video.converter import BlogToVideoConverter
+from vidmation.services.blog2video.scraper import BlogScraper
 
 if TYPE_CHECKING:
     from vidmation.config.settings import Settings

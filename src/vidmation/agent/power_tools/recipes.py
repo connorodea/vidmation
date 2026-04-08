@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import textwrap
 from pathlib import Path
 
 from vidmation.agent.power_tools.executors import CommandExecutor
@@ -521,7 +520,6 @@ class PowerToolRecipes:
         """
         output = self.executor.work_dir / "audio_bed.mp3"
         # Calculate the volume multiplier for the music.
-        import math
         music_vol = 10 ** (ducking_db / 20)  # Convert dB to linear.
 
         self.executor.run(

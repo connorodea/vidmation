@@ -12,7 +12,16 @@ from typing import Optional
 
 import typer
 
-from vidmation.cli.theme import console, err, error, success, info, warning, styled_table, result_panel, spinner
+from vidmation.cli.theme import (
+    console,
+    error,
+    info,
+    result_panel,
+    spinner,
+    styled_table,
+    success,
+    warning,
+)
 
 effects_app = typer.Typer(no_args_is_help=True)
 

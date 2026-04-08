@@ -8,7 +8,7 @@ can programmatically publish to ANY connected channel.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 

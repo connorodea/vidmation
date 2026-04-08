@@ -8,8 +8,8 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import httpx
 import fal_client
+import httpx
 
 from vidmation.config.profiles import VoiceConfig
 from vidmation.services.avatars.base import AvatarProvider

@@ -28,10 +28,10 @@ from typing import Any
 
 import anthropic
 
-from vidmation.config.settings import get_settings
 from vidmation.agent.power_tools.capabilities import get_all_power_tools
-from vidmation.agent.power_tools.executors import CommandExecutor, PathEscapeError
-from vidmation.agent.power_tools.precheck import check_all_tools, get_installed_tools
+from vidmation.agent.power_tools.executors import CommandExecutor
+from vidmation.agent.power_tools.precheck import get_installed_tools
+from vidmation.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -798,7 +798,7 @@ class PowerToolsAgent:
             if fontfile:
                 dt_parts.append(f"fontfile={fontfile}")
             if box:
-                dt_parts.extend([f"box=1", f"boxcolor={boxcolor}", f"boxborderw={boxborderw}"])
+                dt_parts.extend(["box=1", f"boxcolor={boxcolor}", f"boxborderw={boxborderw}"])
             if enable:
                 dt_parts.append(f"enable='{enable}'")
             if shadowcolor:
@@ -1111,17 +1111,17 @@ class PowerToolsAgent:
 
             # Pan expressions.
             if pan == "left":
-                x_expr = f"max(0,iw-iw/zoom-on*2)"
+                x_expr = "max(0,iw-iw/zoom-on*2)"
                 y_expr = "ih/2-(ih/zoom/2)"
             elif pan == "right":
-                x_expr = f"min(iw-iw/zoom,on*2)"
+                x_expr = "min(iw-iw/zoom,on*2)"
                 y_expr = "ih/2-(ih/zoom/2)"
             elif pan == "up":
                 x_expr = "iw/2-(iw/zoom/2)"
-                y_expr = f"max(0,ih-ih/zoom-on*2)"
+                y_expr = "max(0,ih-ih/zoom-on*2)"
             elif pan == "down":
                 x_expr = "iw/2-(iw/zoom/2)"
-                y_expr = f"min(ih-ih/zoom,on*2)"
+                y_expr = "min(ih-ih/zoom,on*2)"
             else:
                 x_expr = "iw/2-(iw/zoom/2)"
                 y_expr = "ih/2-(ih/zoom/2)"
@@ -1241,7 +1241,6 @@ class PowerToolsAgent:
             attack = params.get("attack_ms", 200)
             release = params.get("release_ms", 1000)
 
-            import math
             music_vol = 10 ** (duck_db / 20)
             fc = (
                 f"[1:a]volume={music_vol:.4f}[m];"

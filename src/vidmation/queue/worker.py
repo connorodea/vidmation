@@ -13,7 +13,7 @@ from vidmation.config.settings import Settings, get_settings
 from vidmation.db.engine import get_session, init_db
 from vidmation.db.repos import ChannelRepo, JobRepo, VideoRepo
 from vidmation.models.job import Job, JobStatus, JobType
-from vidmation.models.video import VideoFormat, VideoStatus
+from vidmation.models.video import VideoStatus
 from vidmation.pipeline.context import PipelineContext
 from vidmation.pipeline.orchestrator import PipelineOrchestrator
 from vidmation.pipeline.stages import STAGE_REGISTRY

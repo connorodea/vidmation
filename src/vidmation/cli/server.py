@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import threading
-from typing import Optional
 
 import typer
 
-from vidmation.cli.theme import console, err, error, success, warning, styled_table, status_badge, result_panel, spinner, header, LOGO, TAGLINE, VERSION
+from vidmation.cli.theme import (
+    LOGO,
+    TAGLINE,
+    VERSION,
+    console,
+    header,
+    success,
+)
 from vidmation.db.engine import init_db
 
 server_app = typer.Typer(no_args_is_help=True)

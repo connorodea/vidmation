@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from vidmation.cli.theme import console, error, success, styled_table, result_panel, spinner, header
+from vidmation.cli.theme import console, error, result_panel, spinner, styled_table, success
 
 audio_app = typer.Typer(no_args_is_help=True)
 

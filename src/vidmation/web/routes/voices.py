@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import shutil
-import tempfile
 import uuid
 from pathlib import Path
 
@@ -188,7 +187,7 @@ async def voice_clone(
     finally:
         session.close()
 
-    return RedirectResponse(f"/voices", status_code=303)
+    return RedirectResponse("/voices", status_code=303)
 
 
 @router.post("/{voice_id}/preview")

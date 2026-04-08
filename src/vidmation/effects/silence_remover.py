@@ -8,10 +8,8 @@ how much padding to keep around cuts.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
-import tempfile
 from pathlib import Path
 
 from vidmation.utils.ffmpeg import FFmpegError, get_duration, run_ffmpeg

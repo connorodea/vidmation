@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
-import uuid
 import wave
 from pathlib import Path
 from typing import TYPE_CHECKING, Any

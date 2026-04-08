@@ -13,13 +13,11 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from pathlib import Path
 from typing import Any
 
 import anthropic
 
 from vidmation.agent.prompts import (
-    ERROR_RECOVERY_PROMPT,
     PRODUCTION_PLAN_PROMPT,
     REVIEW_PROMPT,
     SYSTEM_PROMPT,

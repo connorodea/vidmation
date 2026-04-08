@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import json
 from datetime import date, datetime
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from vidmation.config.settings import get_settings
 from vidmation.content.calendar import ContentCalendar
 from vidmation.content.planner import ContentPlanner
 from vidmation.content.series import SeriesManager
-from vidmation.config.settings import get_settings
 from vidmation.db.engine import get_session
 from vidmation.db.repos import ChannelRepo
 from vidmation.queue.tasks import enqueue_video

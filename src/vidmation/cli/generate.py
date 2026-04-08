@@ -10,17 +10,15 @@ import typer
 
 from vidmation.cli.theme import (
     console,
-    err,
-    header,
-    result_panel,
-    success,
     error,
-    warning,
-    step,
-    spinner,
-    pipeline_progress,
+    header,
     kv,
+    pipeline_progress,
+    result_panel,
+    spinner,
     styled_table,
+    success,
+    warning,
 )
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
@@ -476,11 +474,12 @@ def generate_from_blog(
         console.print("\n[bold]Generating full video from blog script...[/bold]")
 
         import uuid
+
+        from vidmation.models.video import VideoFormat
         from vidmation.pipeline.context import PipelineContext
         from vidmation.pipeline.orchestrator import PipelineOrchestrator
         from vidmation.pipeline.stages import STAGE_REGISTRY
         from vidmation.utils.files import get_work_dir
-        from vidmation.models.video import VideoFormat
 
         video_id = str(uuid.uuid4())
         work_dir = get_work_dir(video_id)

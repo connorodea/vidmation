@@ -10,17 +10,13 @@ import typer
 
 from vidmation.cli.theme import (
     console,
-    err,
-    header,
-    result_panel,
-    success,
     error,
-    warning,
     info,
+    result_panel,
     spinner,
     styled_table,
-    kv,
-    divider,
+    success,
+    warning,
 )
 from vidmation.config.settings import get_settings
 
@@ -139,8 +135,8 @@ def flywheel_run(
     if not skip_copy:
         info("Step 1: Generating social media copy with AI...")
         try:
-            from vidmation.services.repurpose import create_repurposer
             from vidmation.config.profiles import get_default_profile
+            from vidmation.services.repurpose import create_repurposer
 
             with spinner("AI generating platform-specific content..."):
                 repurposer = create_repurposer(settings=settings)
@@ -292,8 +288,8 @@ def flywheel_copy(
     else:
         copy_targets = list(COPY_PLATFORMS)
 
-    from vidmation.services.repurpose import create_repurposer
     from vidmation.config.profiles import get_default_profile
+    from vidmation.services.repurpose import create_repurposer
 
     with spinner("Generating social media copy..."):
         repurposer = create_repurposer(settings=settings)

@@ -16,7 +16,11 @@ from typing import TYPE_CHECKING, Any
 import ffmpeg
 
 from vidmation.config.settings import Settings, get_settings
-from vidmation.utils.ffmpeg import FFmpegError, get_duration, get_frame_rate, get_resolution, run_ffmpeg
+from vidmation.utils.ffmpeg import (
+    FFmpegError,
+    get_resolution,
+    run_ffmpeg,
+)
 from vidmation.utils.retry import retry
 
 if TYPE_CHECKING:
@@ -360,8 +364,8 @@ class MagicClips:
                 # Crop center.
                 crop_x = (width - target_w) // 2
                 video_filters.append(f"crop={target_w}:{height}:{crop_x}:0")
-                video_filters.append(f"scale=1080:1920:force_original_aspect_ratio=decrease")
-                video_filters.append(f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black")
+                video_filters.append("scale=1080:1920:force_original_aspect_ratio=decrease")
+                video_filters.append("pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black")
 
         elif reformat == "square":
             # Crop to 1:1 from center.

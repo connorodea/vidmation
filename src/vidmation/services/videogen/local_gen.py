@@ -9,11 +9,8 @@ Requires ``ffmpeg-python`` (``pip install ffmpeg-python``) and ``ffmpeg`` on PAT
 
 from __future__ import annotations
 
-import json
-import math
 import random
 import shutil
-import subprocess
 import tempfile
 import uuid
 from pathlib import Path
@@ -150,9 +147,9 @@ class LocalVideoGenerator(VideoGenerator):
         # Determine zoom direction from prompt
         zoom_in = "zoom out" not in prompt.lower()
         if zoom_in:
-            zoom_expr = f"min(1+0.001*in,1.25)"
+            zoom_expr = "min(1+0.001*in,1.25)"
         else:
-            zoom_expr = f"max(1.25-0.001*in,1.0)"
+            zoom_expr = "max(1.25-0.001*in,1.0)"
 
         # Random pan direction
         x_drift = random.choice(["iw/2-(iw/zoom/2)+in*0.5", "iw/2-(iw/zoom/2)-in*0.5"])
@@ -272,7 +269,7 @@ class LocalVideoGenerator(VideoGenerator):
                     f"gradients=s={width}x{height}:c0={c1}:c1={c2}:speed=0.5:d={duration}:r={fps}",
                     f="lavfi",
                 )
-                .filter("hue", h=f"t*15")
+                .filter("hue", h="t*15")
                 .output(
                     str(output_path),
                     vcodec="libx264",
@@ -295,7 +292,7 @@ class LocalVideoGenerator(VideoGenerator):
                         f"color=c={c1}:s={width}x{height}:d={duration}:r={fps}",
                         f="lavfi",
                     )
-                    .filter("hue", h=f"t*30")
+                    .filter("hue", h="t*30")
                     .output(
                         str(output_path),
                         vcodec="libx264",

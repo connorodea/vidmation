@@ -10,14 +10,19 @@ from __future__ import annotations
 import json
 import logging
 import math
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import ffmpeg
 
 from vidmation.config.settings import Settings, get_settings
-from vidmation.utils.ffmpeg import FFmpegError, get_duration, get_frame_rate, get_resolution, run_ffmpeg
+from vidmation.utils.ffmpeg import (
+    FFmpegError,
+    get_duration,
+    get_frame_rate,
+    get_resolution,
+    run_ffmpeg,
+)
 from vidmation.utils.retry import retry
 
 if TYPE_CHECKING:
@@ -466,8 +471,8 @@ class MagicZoom:
             )
 
             # Center the zoom.
-            x_expr = f"iw/2-(iw/zoom/2)"
-            y_expr = f"ih/2-(ih/zoom/2)"
+            x_expr = "iw/2-(iw/zoom/2)"
+            y_expr = "ih/2-(ih/zoom/2)"
 
             label = f"[zoom{i}]"
             filter_parts.append(

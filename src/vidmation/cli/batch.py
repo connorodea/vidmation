@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from vidmation.cli.theme import console, error, success, info, styled_table, spinner, warning
+from vidmation.cli.theme import console, error, info, spinner, styled_table, success, warning
 
 batch_app = typer.Typer(no_args_is_help=True)
 

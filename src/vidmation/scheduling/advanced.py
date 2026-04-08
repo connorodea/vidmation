@@ -14,11 +14,11 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from vidmation.config.settings import Settings, get_settings
 from vidmation.db.engine import get_session, init_db
-from vidmation.models.schedule import Schedule, ScheduleStatus, ScheduleType, TopicSource
+from vidmation.models.schedule import Schedule, ScheduleStatus, ScheduleType
 
 logger = logging.getLogger("vidmation.scheduling.advanced")
 

@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING, Any
 
 import anthropic
 
-from vidmation.batch.csv_parser import BatchCSVParser, BatchRow
+from vidmation.batch.csv_parser import BatchCSVParser
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import Settings, get_settings
 from vidmation.db.engine import get_session, init_db
 from vidmation.db.repos import ChannelRepo
 from vidmation.models.job import Job, JobType
-from vidmation.models.video import Video, VideoFormat
+from vidmation.models.video import Video
 from vidmation.queue.tasks import enqueue_video
 from vidmation.utils.retry import retry
 

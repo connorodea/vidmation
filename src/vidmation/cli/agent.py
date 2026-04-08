@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich.panel import Panel
 
-from vidmation.cli.theme import console, error, warning, header, result_panel, spinner, styled_table
+if TYPE_CHECKING:
+    from vidmation.agent.orchestrator import AgentOrchestrator
+    from vidmation.pipeline.context import PipelineContext
+
+from vidmation.cli.theme import console, error, header, result_panel, spinner, styled_table, warning
 from vidmation.config.profiles import ChannelProfile, get_default_profile, load_profile
 from vidmation.config.settings import get_settings
 

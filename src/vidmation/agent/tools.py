@@ -427,7 +427,7 @@ class AgentToolkit:
         If template is "auto", selects based on the channel niche.
         """
         try:
-            from vidmation.captions.templates import get_template, list_templates
+            from vidmation.captions.templates import get_template
 
             if self.ctx.final_video_path is None:
                 return "ERROR: No video to apply captions to. Run assemble_video first."
@@ -753,7 +753,7 @@ class AgentToolkit:
     def apply_brand_kit(self) -> str:
         """Apply branding (logo, watermark, intro/outro)."""
         try:
-            from vidmation.brand import BrandKit, add_logo_overlay, add_watermark
+            from vidmation.brand import add_logo_overlay
 
             if self.ctx.final_video_path is None:
                 return "ERROR: No video available."

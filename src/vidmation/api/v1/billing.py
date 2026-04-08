@@ -6,10 +6,10 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 from vidmation.auth.dependencies import require_active_user
-from vidmation.billing.plans import PLANS, check_video_limit, get_plan
+from vidmation.billing.plans import get_plan
 from vidmation.billing.stripe_service import StripeService
 from vidmation.config.settings import get_settings
 from vidmation.models.user import User

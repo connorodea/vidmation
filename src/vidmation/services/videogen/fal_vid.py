@@ -8,8 +8,8 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import httpx
 import fal_client
+import httpx
 
 from vidmation.services.videogen.base import VideoGenerator
 from vidmation.utils.retry import retry

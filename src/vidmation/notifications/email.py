@@ -15,7 +15,6 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any
 
 logger = logging.getLogger("vidmation.notifications.email")
 

@@ -7,7 +7,6 @@ Supports both JWT auth (primary) and API key auth (legacy/programmatic).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -17,7 +16,6 @@ from vidmation.api.v1.schemas import (
     BatchItemResponse,
     BatchResponse,
     ErrorResponse,
-    PaginationParams,
     VideoCreateRequest,
     VideoExportRequest,
     VideoExportResponse,
@@ -28,7 +26,7 @@ from vidmation.api.v1.schemas import (
 from vidmation.api.webhooks import WebhookManager
 from vidmation.auth.dependencies import require_active_user
 from vidmation.db.engine import get_session
-from vidmation.db.repos import ChannelRepo, JobRepo, VideoRepo
+from vidmation.db.repos import JobRepo, VideoRepo
 from vidmation.models.channel import Channel
 from vidmation.models.job import Job, JobStatus, JobType
 from vidmation.models.user import User

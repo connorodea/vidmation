@@ -9,7 +9,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from vidmation.db.engine import get_session
 from vidmation.db.repos import ChannelRepo, VideoRepo
-from vidmation.models.schedule import ScheduleStatus
 from vidmation.models.video import VideoStatus
 from vidmation.scheduling.advanced import AdvancedScheduler
 from vidmation.web.templating import get_templates

@@ -12,12 +12,11 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from vidmation.auth.dependencies import optional_user, require_active_user
-from vidmation.models.asset import AssetType
 from vidmation.models.user import User
-from vidmation.services.assets.manager import AssetManager, UPLOADABLE_TYPES
+from vidmation.services.assets.manager import UPLOADABLE_TYPES, AssetManager
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 

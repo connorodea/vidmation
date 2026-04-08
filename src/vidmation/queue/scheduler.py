@@ -12,7 +12,6 @@ import signal
 import threading
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from vidmation.config.profiles import ChannelProfile, load_profile

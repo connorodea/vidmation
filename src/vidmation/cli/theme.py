@@ -16,7 +16,6 @@ from __future__ import annotations
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 from rich.theme import Theme
 
 # ---------------------------------------------------------------------------
@@ -146,7 +145,7 @@ def result_panel(
     icon = icons.get(status, "")
 
     lines: list[str] = [f"{icon} [bold bright_white]{title}[/bold bright_white]\n"]
-    max_label = max((len(l) for l, _ in rows), default=0) + 1
+    max_label = max((len(lbl) for lbl, _ in rows), default=0) + 1
     for label, value in rows:
         lines.append(f"  [label]{label:<{max_label}}[/label] {value}")
 

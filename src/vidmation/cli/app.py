@@ -50,13 +50,13 @@ def _main_callback(
 ) -> None:
     """[bold bright_green]AIVidio[/] \u2014 AI-powered faceless video automation."""
     if version:
-        from vidmation.cli.theme import console, LOGO, TAGLINE, VERSION, ACCENT
+        from vidmation.cli.theme import LOGO, TAGLINE, VERSION, console
 
         console.print(f"vidmation [bold bright_green]{VERSION}[/bold bright_green]")
         raise typer.Exit()
 
     if ctx.invoked_subcommand is None:
-        from vidmation.cli.theme import console, LOGO, TAGLINE, VERSION
+        from vidmation.cli.theme import LOGO, TAGLINE, VERSION, console
 
         console.print(LOGO)
         console.print(f"  {TAGLINE}   [dim]v{VERSION}[/dim]")

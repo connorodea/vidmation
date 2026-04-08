@@ -16,8 +16,8 @@ from vidmation.cli.theme import (
     success,
     warning,
 )
-from vidmation.db.engine import get_session, init_db
-from vidmation.services.assets.manager import AssetManager, UPLOADABLE_TYPES
+from vidmation.db.engine import init_db
+from vidmation.services.assets.manager import UPLOADABLE_TYPES, AssetManager
 
 assets_app = typer.Typer(no_args_is_help=True)
 

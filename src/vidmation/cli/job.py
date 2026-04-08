@@ -6,7 +6,15 @@ from typing import Optional
 
 import typer
 
-from vidmation.cli.theme import console, err, error, success, warning, styled_table, status_badge, result_panel, spinner, header
+from vidmation.cli.theme import (
+    console,
+    error,
+    result_panel,
+    status_badge,
+    styled_table,
+    success,
+    warning,
+)
 from vidmation.db.engine import get_session, init_db
 from vidmation.db.repos import JobRepo, VideoRepo
 from vidmation.models.job import JobStatus

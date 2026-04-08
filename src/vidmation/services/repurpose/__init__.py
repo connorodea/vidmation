@@ -8,6 +8,7 @@ from vidmation.config.settings import get_settings
 
 if TYPE_CHECKING:
     from vidmation.config.settings import Settings
+    from vidmation.services.repurpose.generator import ContentRepurposer as ContentRepurposer
 
 __all__ = ["ContentRepurposer", "create_repurposer"]
 

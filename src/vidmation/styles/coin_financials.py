@@ -12,24 +12,24 @@ Style characteristics (from frame-by-frame analysis):
 - "Ai" watermark in top-left corner
 """
 
-from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
 
 @dataclass
 class CoinFinancialsStyle:
     """Configuration for TheCoinFinancials visual style."""
-    
+
     # Image generation
     image_style: str = "oil painting, impressionist style, dramatic lighting, moody atmospheric, historical"
     image_provider: str = "dalle"  # or "replicate" for flux
     image_size: str = "1792x1024"  # Landscape for DALL-E
     images_per_section: int = 8  # More images = more visual variety
-    
+
     # Ken Burns
     ken_burns_scale: float = 1.05  # 5% zoom
     ken_burns_speed: float = 0.05  # Very slow drift
     clip_duration: float = 5.0  # Seconds per image
-    
+
     # Subtitle style
     subtitle_font: str = "Montserrat-Bold"
     subtitle_size: int = 42
@@ -38,23 +38,23 @@ class CoinFinancialsStyle:
     subtitle_highlight_color: str = "#FFD700"  # Gold/yellow for keyword
     subtitle_position: str = "bottom_center"
     subtitle_margin_bottom: int = 80
-    
+
     # Color grade
     contrast: float = 1.06
     brightness: float = 0.008
     saturation: float = 1.1
     gamma: float = 0.96
     vignette: str = "PI/5"
-    
+
     # Watermark
     watermark_text: str = "Ai"
     watermark_position: str = "top_left"
     watermark_opacity: float = 0.4
-    
+
     # Audio
     voice: str = "onyx"  # Deep, authoritative
     music_volume_db: float = -14.0
-    
+
     # Title cards
     title_bg: str = "#0a0a0a"
     title_color: str = "white"
@@ -74,7 +74,7 @@ def generate_image_prompt(narration_text: str, topic: str, style: CoinFinancials
 
 def get_keyword_for_highlight(words: list[str]) -> int:
     """Pick the most important word in a subtitle group to highlight yellow.
-    
+
     Returns the index of the word to highlight.
     Prefers: nouns, numbers, action verbs, financial terms.
     """
@@ -90,12 +90,12 @@ def get_keyword_for_highlight(words: list[str]) -> int:
         "ai", "automated", "technology", "software", "algorithm", "data",
         "wholesaling", "property", "real", "estate", "deal", "contract",
     }
-    
+
     # Check each word against priority list
     for i, word in enumerate(words):
         if word.lower().strip(".,!?") in priority_words:
             return i
-    
+
     # Default: highlight the last word (usually most impactful in English)
     return len(words) - 1
 

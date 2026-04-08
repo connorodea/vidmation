@@ -450,8 +450,8 @@ def stage_video_assembly(ctx: PipelineContext, settings: Settings) -> None:
 
     logger.info("[assembly] Assembling final video")
 
-    from vidmation.video.assembler import VideoAssembler
     from vidmation.utils.files import get_work_dir
+    from vidmation.video.assembler import VideoAssembler
 
     output_path = get_output_path(ctx.video_id, "final.mp4")
     work_dir = get_work_dir(ctx.video_id)

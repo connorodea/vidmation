@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import stripe
 from sqlalchemy.orm import Session
 
-from vidmation.billing.plans import PLANS, get_plan
+from vidmation.billing.plans import get_plan
 from vidmation.config.settings import get_settings
 from vidmation.db.engine import get_session
 from vidmation.models.user import SubscriptionTier, User

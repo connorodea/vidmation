@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func, select
 
 from vidmation.db.engine import get_session
 from vidmation.models.analytics import UsageEvent, VideoAnalytics
-from vidmation.models.channel import Channel
 from vidmation.models.video import Video, VideoStatus
 
 logger = logging.getLogger("vidmation.analytics.reports")

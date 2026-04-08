@@ -5,17 +5,18 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import typer
 
+if TYPE_CHECKING:
+    from vidmation.config.settings import Settings
+
 from vidmation.cli.theme import (
     console,
-    err,
     error,
     header,
     info,
-    kv,
     result_panel,
     spinner,
     status_badge,

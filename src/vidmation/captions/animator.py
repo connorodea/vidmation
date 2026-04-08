@@ -44,7 +44,6 @@ from vidmation.captions.effects import (
     glow,
     karaoke_fill,
     pop_in,
-    scale_pulse,
     shake,
     slide_up,
     typewriter_char,

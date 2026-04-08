@@ -12,15 +12,13 @@ visual style typical of faceless YouTube content.
 from __future__ import annotations
 
 import logging
-import math
 import random
 from pathlib import Path
-from typing import Any
 
 import ffmpeg
 
 from vidmation.config.profiles import VideoConfig
-from vidmation.utils.ffmpeg import FFmpegError, get_duration, get_resolution
+from vidmation.utils.ffmpeg import FFmpegError, get_duration
 from vidmation.video.audio_mixer import get_audio_duration, mix_voiceover_and_music
 from vidmation.video.captions_render import burn_captions, generate_ass_file
 from vidmation.video.formats import FormatSpec, get_format

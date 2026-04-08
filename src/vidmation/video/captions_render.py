@@ -23,8 +23,6 @@ import logging
 from pathlib import Path
 from textwrap import dedent
 
-import ffmpeg
-
 from vidmation.utils.ffmpeg import FFmpegError
 
 logger = logging.getLogger(__name__)

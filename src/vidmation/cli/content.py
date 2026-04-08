@@ -9,7 +9,7 @@ from typing import Optional
 import typer
 from rich.panel import Panel
 
-from vidmation.cli.theme import console, success, info, styled_table, spinner
+from vidmation.cli.theme import console, info, spinner, styled_table, success
 from vidmation.config.settings import get_settings
 from vidmation.db.engine import init_db
 

@@ -262,7 +262,7 @@ STYLES = {
         recommended_voice="onyx",
         music_mood="dark_cinematic",
     ),
-    
+
     "cinematic_realism": VideoStyle(
         id="cinematic_realism",
         name="Cinematic Realism",
@@ -275,7 +275,7 @@ STYLES = {
         recommended_voice="echo",
         music_mood="upbeat_cinematic",
     ),
-    
+
     "anime_illustration": VideoStyle(
         id="anime_illustration",
         name="Anime / Illustration",
@@ -288,7 +288,7 @@ STYLES = {
         recommended_voice="nova",
         music_mood="energetic",
     ),
-    
+
     "watercolor": VideoStyle(
         id="watercolor",
         name="Watercolor",
@@ -302,7 +302,7 @@ STYLES = {
         recommended_voice="shimmer",
         music_mood="ambient_calm",
     ),
-    
+
     "dark_noir": VideoStyle(
         id="dark_noir",
         name="Dark Noir",
@@ -316,7 +316,7 @@ STYLES = {
         recommended_voice="onyx",
         music_mood="dark_suspense",
     ),
-    
+
     "retro_vintage": VideoStyle(
         id="retro_vintage",
         name="Retro Vintage",
@@ -329,7 +329,7 @@ STYLES = {
         recommended_voice="fable",
         music_mood="retro_synth",
     ),
-    
+
     "corporate_clean": VideoStyle(
         id="corporate_clean",
         name="Corporate Clean",
@@ -343,7 +343,7 @@ STYLES = {
         recommended_voice="echo",
         music_mood="corporate_upbeat",
     ),
-    
+
     "sci_fi_futuristic": VideoStyle(
         id="sci_fi_futuristic",
         name="Sci-Fi Futuristic",
@@ -356,7 +356,7 @@ STYLES = {
         recommended_voice="alloy",
         music_mood="electronic_ambient",
     ),
-    
+
     "nature_documentary": VideoStyle(
         id="nature_documentary",
         name="Nature Documentary",
@@ -370,7 +370,7 @@ STYLES = {
         recommended_voice="nova",
         music_mood="orchestral_nature",
     ),
-    
+
     "stock_footage": VideoStyle(
         id="stock_footage",
         name="Stock Footage",
@@ -400,13 +400,13 @@ def list_styles() -> list[dict]:
 
 def build_image_prompt(topic_context: str, narration_text: str, style: VideoStyle) -> str:
     """Build a complete image generation prompt for any topic + style combination.
-    
+
     The style provides the artistic direction, the topic/narration provides the content.
     This works for ANY niche — the AI adapts the scene to match what's being discussed.
     """
     if not style.image_prompt_prefix:
         return ""  # Stock footage style — no image generation needed
-    
+
     return f"{style.image_prompt_prefix} depicting a scene related to: {narration_text[:100]}. Context: {topic_context[:50]}. {style.image_prompt_suffix}"
 
 

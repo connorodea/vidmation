@@ -7,8 +7,8 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import httpx
 import fal_client
+import httpx
 
 from vidmation.services.imagegen.base import ImageGenerator
 from vidmation.utils.retry import retry

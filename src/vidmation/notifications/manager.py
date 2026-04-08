@@ -95,7 +95,7 @@ class NotificationManager:
         return self.notify(
             event="video_complete",
             title=notif_title,
-            message=f"Your video has been generated successfully and is ready for review.",
+            message="Your video has been generated successfully and is ready for review.",
             data={"video_id": video_id},
         )
 
@@ -104,7 +104,7 @@ class NotificationManager:
         return self.notify(
             event="job_failed",
             title="Job Failed",
-            message=f"A pipeline job encountered an error and could not complete.",
+            message="A pipeline job encountered an error and could not complete.",
             data={"job_id": job_id, "error": error},
         )
 
@@ -113,7 +113,7 @@ class NotificationManager:
         return self.notify(
             event="upload_complete",
             title="Video Uploaded to YouTube",
-            message=f"Your video has been successfully uploaded and is now live.",
+            message="Your video has been successfully uploaded and is now live.",
             data={"video_id": video_id, "youtube_url": youtube_url},
         )
 

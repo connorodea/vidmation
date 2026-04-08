@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -1446,9 +1446,9 @@ class ToolRegistry:
         def _fit_clip_to_duration(
             clip_path: str, duration: float, output_path: str = "", **kwargs: Any
         ) -> str:
-            from vidmation.utils.ffmpeg import get_duration as _get_dur
-
             import ffmpeg as _ffmpeg
+
+            from vidmation.utils.ffmpeg import get_duration as _get_dur
 
             src = Path(clip_path)
             out = Path(output_path) if output_path else src.with_stem(f"{src.stem}_fitted")
@@ -2523,9 +2523,9 @@ class ToolRegistry:
     def _register_file_tools(self) -> None:
         # -- check_ffmpeg --------------------------------------------------
         def _check_ffmpeg(**kwargs: Any) -> str:
-            from vidmation.utils.ffmpeg import check_ffmpeg_installed
-
             import shutil
+
+            from vidmation.utils.ffmpeg import check_ffmpeg_installed
 
             ok = check_ffmpeg_installed()
             version = "unknown"

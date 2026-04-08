@@ -6,7 +6,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from vidmation.api.v1.router import router as api_v1_router
 from vidmation.auth.routes import router as auth_router

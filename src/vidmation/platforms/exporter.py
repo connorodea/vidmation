@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from vidmation.config.profiles import ChannelProfile
-from vidmation.platforms.base import Platform, PlatformType
+from vidmation.platforms.base import Platform
 from vidmation.platforms.facebook import FacebookPlatform
 from vidmation.platforms.instagram import InstagramPlatform
 from vidmation.platforms.tiktok import TikTokPlatform

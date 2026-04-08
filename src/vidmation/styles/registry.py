@@ -16,7 +16,6 @@ Usage::
 from __future__ import annotations
 
 import copy
-from dataclasses import fields as dc_fields
 
 from vidmation.config.profiles import (
     ChannelProfile,
@@ -25,7 +24,6 @@ from vidmation.config.profiles import (
     VideoConfig,
 )
 from vidmation.styles.presets import VIDEO_TEMPLATES, VideoTemplate
-
 
 # ---------------------------------------------------------------------------
 # Lookup helpers
