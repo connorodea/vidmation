@@ -26,46 +26,49 @@ jobs:
         run: ruff check src/
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short || true
+        run: pytest tests/ -v --tb=short
 
   deploy:
     needs: ci
     runs-on: ubuntu-latest
+    # Only deploy if Hetzner secrets are configured
+    if: ${{ secrets.HETZNER_CO_HOST != '' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select server by owner
+      - name: Check deploy secrets
         id: server
         run: |
-          OWNER="${{ github.repository_owner }}"
-          if [[ "$OWNER" == "connorodea" ]]; then
-            echo "host=${{ secrets.HETZNER_CO_HOST }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.HETZNER_CO_USER }}" >> $GITHUB_OUTPUT
-            echo "key_secret=HETZNER_CO_SSH_KEY" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.HETZNER_CO_PORT || 22 }}" >> $GITHUB_OUTPUT
-          else
-            echo "::error::Unknown repository owner: $OWNER"
-            exit 1
+          if [[ -z "${{ secrets.HETZNER_CO_HOST }}" ]]; then
+            echo "::warning::Deploy secrets not configured — skipping deployment"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          echo "host=${{ secrets.HETZNER_CO_HOST }}" >> $GITHUB_OUTPUT
+          echo "user=${{ secrets.HETZNER_CO_USER }}" >> $GITHUB_OUTPUT
+          echo "port=${{ secrets.HETZNER_CO_PORT }}" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
 
       - name: Deploy via rsync
+        if: steps.server.outputs.skip != 'true'
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avz --delete --exclude='.env' --exclude='data/' --exclude='output/' --exclude='*.pyc' --exclude='__pycache__' --exclude='.git'
+          switches: -avz --delete --exclude='.env' --exclude='data/' --exclude='output/' --exclude='*.pyc' --exclude='__pycache__' --exclude='.git' --exclude='node_modules'
           path: ./
           remote_path: /var/www/vidmation/
           remote_host: ${{ steps.server.outputs.host }}
           remote_user: ${{ steps.server.outputs.user }}
-          remote_key: ${{ secrets[steps.server.outputs.key_secret] }}
-          remote_port: ${{ steps.server.outputs.port }}
+          remote_key: ${{ secrets.HETZNER_CO_SSH_KEY }}
+          remote_port: ${{ steps.server.outputs.port || 22 }}
 
       - name: Run deploy script
+        if: steps.server.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server.outputs.host }}
           username: ${{ steps.server.outputs.user }}
-          key: ${{ secrets[steps.server.outputs.key_secret] }}
-          port: ${{ steps.server.outputs.port }}
+          key: ${{ secrets.HETZNER_CO_SSH_KEY }}
+          port: ${{ steps.server.outputs.port || 22 }}
           script: |
             cd /var/www/vidmation
             bash deploy/deploy.sh
