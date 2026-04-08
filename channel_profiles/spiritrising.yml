@@ -1,0 +1,53 @@
+name: SpiritRising2026
+niche: spirituality
+target_audience: "Spiritual seekers, meditation practitioners, people interested in awakening and consciousness"
+
+content:
+  tone: "calm, introspective, wise, encouraging"
+  script_style: listicle
+  typical_topics:
+    - spiritual awakening
+    - meditation techniques
+    - signs from the universe
+    - chakra healing
+    - manifestation
+    - inner peace
+    - mindfulness
+    - energy healing
+  intro_hook_style: question
+  cta_style: gentle
+
+voice:
+  provider: openai
+  voice_id: nova
+  stability: 0.6
+  speed: 0.95
+
+video:
+  format: landscape
+  resolution: "1920x1080"
+  transition: crossfade
+  caption_style: highlight
+  caption_font: Montserrat-Bold
+  caption_color: "#FFFFFF"
+  caption_outline_color: "#000000"
+  caption_font_size: 52
+
+music:
+  genre: ambient
+  volume: 0.12
+
+thumbnail:
+  provider: dalle
+  style: "mystical, ethereal atmosphere, cosmic colors, spiritual symbols, dramatic lighting"
+  include_text: true
+
+brand:
+  logo: assets/channels/spiritrising/logo.png
+  watermark: assets/channels/spiritrising/logo.png
+
+youtube:
+  visibility: public
+  category_id: "22"
+  default_language: en
+  channel_id: UCB4DHFIBrqIrIlzW5Q8_n5g

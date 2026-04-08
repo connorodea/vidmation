@@ -1,0 +1,47 @@
+name: PodcastClippings
+niche: podcast highlights
+target_audience: "Podcast fans, people who want quick takeaways from long episodes, busy professionals"
+
+content:
+  tone: "energetic, conversational, punchy, direct"
+  script_style: listicle
+  typical_topics:
+    - podcast highlights
+    - interview clips
+    - best moments
+    - viral podcast moments
+    - expert insights
+    - motivational speeches
+    - debate highlights
+  intro_hook_style: bold_statement
+  cta_style: direct
+
+voice:
+  provider: openai
+  voice_id: onyx
+  stability: 0.5
+  speed: 1.05
+
+video:
+  format: portrait
+  resolution: "1080x1920"
+  transition: cut
+  caption_style: tiktok
+  caption_font: Montserrat-Bold
+  caption_color: "#FFFFFF"
+  caption_outline_color: "#000000"
+  caption_font_size: 72
+
+music:
+  genre: electronic
+  volume: 0.08
+
+thumbnail:
+  provider: dalle
+  style: "bold text overlay, high contrast, dramatic expressions, podcast microphone, dark background"
+  include_text: true
+
+youtube:
+  visibility: public
+  category_id: "22"
+  default_language: en
