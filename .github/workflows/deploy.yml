@@ -53,7 +53,7 @@ jobs:
         with:
           switches: -avz --delete --exclude='.env' --exclude='data/' --exclude='output/' --exclude='*.pyc' --exclude='__pycache__' --exclude='.git' --exclude='node_modules'
           path: ./
-          remote_path: /var/www/vidmation/
+          remote_path: /var/www/aividio/
           remote_host: ${{ steps.server.outputs.host }}
           remote_user: ${{ steps.server.outputs.user }}
           remote_key: ${{ secrets.HETZNER_CO_SSH_KEY }}
@@ -68,5 +68,5 @@ jobs:
           key: ${{ secrets.HETZNER_CO_SSH_KEY }}
           port: ${{ steps.server.outputs.port || 22 }}
           script: |
-            cd /var/www/vidmation
+            cd /var/www/aividio
             bash deploy/deploy.sh

@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from vidmation.api.v1.router import router as api_v1_router
@@ -38,6 +40,25 @@ def create_app() -> FastAPI:
         description="AI-powered faceless YouTube video automation — aividio.com",
         version="0.1.0",
     )
+
+    # CORS — allow the frontend origin in production and localhost in dev
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "https://aividio.com",
+            "https://www.aividio.com",
+            "http://localhost:3000",
+            "http://localhost:3002",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Health check endpoint (used by Nginx and deploy script)
+    @app.get("/health", include_in_schema=False)
+    async def health_check():
+        return JSONResponse({"status": "ok"})
 
     # Initialize database tables
     init_db()
