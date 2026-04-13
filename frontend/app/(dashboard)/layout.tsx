@@ -1,16 +1,19 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { AuthProvider, useAuth } from "@/lib/auth-context"
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
 
-  const sidebarUser = {
-    name: user?.name || "User",
-    email: user?.email || "",
-    subscription_tier: user?.subscription_tier || "free",
-  }
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/login")
+    }
+  }, [isLoading, isAuthenticated, router])
 
   if (isLoading) {
     return (
@@ -20,9 +23,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     )
   }
 
+  if (!isAuthenticated) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SidebarNav user={sidebarUser} />
+      <SidebarNav />
       <main className="pl-[200px]">
         <div className="min-h-screen bg-background">{children}</div>
       </main>

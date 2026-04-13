@@ -33,13 +33,29 @@ function ResetPasswordContent() {
   const passwordsMatch = password === confirmPassword && password.length > 0
   const isValid = hasUppercase && hasLowercase && hasDigit && hasMinLength && passwordsMatch
 
+  const [error, setError] = useState("")
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isValid || !token) return
+    setError("")
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    setIsLoading(false)
-    setIsSuccess(true)
+    try {
+      const res = await fetch("/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, new_password: password }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || "Reset failed")
+      }
+      setIsSuccess(true)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Reset failed")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (!token) {
