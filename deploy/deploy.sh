@@ -24,8 +24,11 @@ mkdir -p data output assets/fonts assets/music channel_profiles logs
 
 # Restart services
 echo "Restarting services..."
-systemctl restart "$SERVICE_API"
-systemctl restart "$SERVICE_WEB"
+systemctl stop "$SERVICE_API" || true
+systemctl stop "$SERVICE_WEB" || true
+sleep 2
+systemctl start "$SERVICE_API"
+systemctl start "$SERVICE_WEB"
 
 # Wait for startup
 sleep 5
@@ -39,7 +42,7 @@ systemctl status "$SERVICE_WEB" --no-pager -l
 echo ""
 
 # Quick health check
-API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8001/docs 2>/dev/null || echo "000")
+API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8001/health 2>/dev/null || echo "000")
 WEB_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3002/ 2>/dev/null || echo "000")
 echo "API /docs: HTTP $API_STATUS"
 echo "Web /: HTTP $WEB_STATUS"
