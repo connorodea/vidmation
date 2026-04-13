@@ -82,6 +82,9 @@ dependencies = [
     # Billing
     "stripe>=8.0",
 
+    # Database drivers
+    "psycopg2-binary>=2.9,<2.10",
+
     # Utils
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
