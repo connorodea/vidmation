@@ -51,7 +51,7 @@ jobs:
         if: steps.server.outputs.skip != 'true'
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avz --delete --exclude='.env' --exclude='data/' --exclude='output/' --exclude='*.pyc' --exclude='__pycache__' --exclude='.git' --exclude='node_modules'
+          switches: -avz --delete --exclude='.env' --exclude='data/' --exclude='output/' --exclude='logs/' --exclude='.venv/' --exclude='*.pyc' --exclude='__pycache__' --exclude='.git' --exclude='node_modules' --exclude='.next/'
           path: ./
           remote_path: /var/www/aividio/
           remote_host: ${{ steps.server.outputs.host }}
