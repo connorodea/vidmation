@@ -38,18 +38,6 @@ function HeroSection() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[800px] text-center">
-        {/* Hero Logo */}
-        <div className="mb-8 flex justify-center">
-          <Image
-            src="/aividio-logo.png"
-            alt="AIVIDIO"
-            width={280}
-            height={74}
-            className="invert brightness-200"
-            priority
-          />
-        </div>
-
         {/* Badge */}
         <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 backdrop-blur-sm">
           <div className="h-1.5 w-1.5 rounded-full bg-[#10a37f] animate-pulse-dot" />
