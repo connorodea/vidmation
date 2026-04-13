@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { authFetch, clearTokens } from "@/lib/api"
 
 export type SubscriptionTier = "free" | "pro" | "business"
 
@@ -29,31 +30,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock user for demo purposes
-const mockUser: User = {
-  id: "usr_123456",
-  email: "demo@aividio.com",
-  name: "Demo User",
-  subscription_tier: "pro",
-  subscription_expires_at: "2026-12-31T23:59:59Z",
-  is_active: true,
-  is_admin: false,
-  is_verified: true,
-  created_at: "2024-01-15T10:30:00Z",
-  last_login_at: "2026-04-07T09:00:00Z",
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing session
     const checkAuth = async () => {
       const token = localStorage.getItem("access_token")
       if (token) {
-        // In production, validate token with API
-        setUser(mockUser)
+        try {
+          const userData = await authFetch<User>("/me")
+          setUser(userData)
+        } catch {
+          // Token expired or invalid
+          clearTokens()
+        }
       }
       setIsLoading(false)
     }
@@ -62,43 +53,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    if (email && password) {
-      localStorage.setItem("access_token", "mock_jwt_token")
-      localStorage.setItem("refresh_token", "mock_refresh_token")
-      setUser({ ...mockUser, email })
-    } else {
-      throw new Error("Invalid email or password")
+    try {
+      const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || "Invalid email or password")
+      }
+
+      const tokens = await res.json()
+      localStorage.setItem("access_token", tokens.access_token)
+      localStorage.setItem("refresh_token", tokens.refresh_token)
+
+      // Fetch user profile
+      const userData = await authFetch<User>("/me")
+      setUser(userData)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    if (name && email && password) {
-      localStorage.setItem("access_token", "mock_jwt_token")
-      localStorage.setItem("refresh_token", "mock_refresh_token")
-      setUser({ ...mockUser, name, email, subscription_tier: "free", is_verified: false })
-    } else {
-      throw new Error("All fields are required")
+    try {
+      const res = await fetch("/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || "Signup failed")
+      }
+
+      const tokens = await res.json()
+      localStorage.setItem("access_token", tokens.access_token)
+      localStorage.setItem("refresh_token", tokens.refresh_token)
+
+      // Fetch user profile
+      const userData = await authFetch<User>("/me")
+      setUser(userData)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const logout = async () => {
-    localStorage.removeItem("access_token")
-    localStorage.removeItem("refresh_token")
+    try {
+      await authFetch("/logout", { method: "POST" })
+    } catch {
+      // Logout may fail if token is already expired — that's fine
+    }
+    clearTokens()
     setUser(null)
   }
 
   const refreshUser = async () => {
-    // In production, fetch fresh user data
-    setUser(mockUser)
+    try {
+      const userData = await authFetch<User>("/me")
+      setUser(userData)
+    } catch {
+      clearTokens()
+      setUser(null)
+    }
   }
 
   return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -17,68 +17,54 @@ import {
   RefreshCw,
   Copy,
   Share2,
+  AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { apiFetch } from "@/lib/api"
 
-const mockVideo = {
-  id: "vid_120",
-  title: "The Hidden System Banks Use to Control Money",
-  description: "Discover the psychological and financial systems that banks use to maintain control over money supply and how you can protect yourself.",
-  tags: ["finance", "banking", "money", "wealth"],
-  status: "ready",
-  format: "landscape",
-  style: "Oil Painting",
-  voice: "Onyx",
-  duration_seconds: 504,
-  created_at: "2026-04-07T08:30:00Z",
-  channel: { name: "Wealth Wisdom" },
-  script_json: {
-    hook: "What if I told you that the money in your bank account isn't really yours?",
-    sections: [
-      {
-        section_number: 1,
-        heading: "The Fractional Reserve System",
-        narration: "Every time you deposit money into your bank account, something interesting happens. The bank doesn't just keep your money in a vault.",
-        visual_query: "oil painting of a Renaissance-era bank vault with gold coins",
-      },
-      {
-        section_number: 2,
-        heading: "How Money Is Created",
-        narration: "Here's where it gets mind-bending. When banks lend out your money, they're actually creating new money.",
-        visual_query: "oil painting of money multiplying through a complex system",
-      },
-      {
-        section_number: 3,
-        heading: "The Interest Game",
-        narration: "Now, here's the catch. Banks charge interest on the money they lend out, but pay you much less interest on your deposits.",
-        visual_query: "oil painting of a balance scale with gold on one side",
-      },
-    ],
-    outro: "Now you understand how banks really work.",
-  },
-  jobs: [{ id: "job_1", status: "completed", progress_pct: 100 }],
-  cost_breakdown: { script: 0.05, voiceover: 0.18, images: 0.42, whisper: 0.02, total: 0.67 },
+interface VideoJob {
+  id: string
+  status: string
+  progress_pct: number
+  stages?: {
+    name: string
+    status: string
+    progress?: number
+    total?: number
+  }[]
+  estimated_seconds_remaining?: number
 }
 
-const generatingVideo = {
-  ...mockVideo,
-  id: "vid_new",
-  status: "generating",
-  duration_seconds: 0,
-  jobs: [{
-    id: "job_new",
-    status: "running",
-    progress_pct: 45,
-    stages: [
-      { name: "script", status: "completed" },
-      { name: "voiceover", status: "completed" },
-      { name: "images", status: "running", progress: 12, total: 40 },
-      { name: "assembly", status: "pending" },
-      { name: "captions", status: "pending" },
-      { name: "export", status: "pending" },
-    ],
-    estimated_seconds_remaining: 120,
-  }],
+interface Video {
+  id: string
+  title: string
+  description: string
+  tags: string[]
+  status: string
+  format: string
+  style: string
+  voice: string
+  duration_seconds: number
+  created_at: string
+  channel: { name: string }
+  script_json: {
+    hook: string
+    sections: {
+      section_number: number
+      heading: string
+      narration: string
+      visual_query: string
+    }[]
+    outro: string
+  }
+  jobs: VideoJob[]
+  cost_breakdown: {
+    script: number
+    voiceover: number
+    images: number
+    whisper: number
+    total: number
+  }
 }
 
 function formatDuration(seconds: number): string {
@@ -91,10 +77,98 @@ function formatDuration(seconds: number): string {
 export default function VideoDetailPage() {
   const params = useParams()
   const [activeTab, setActiveTab] = useState<"overview" | "script" | "assets">("overview")
-  
-  const video = params.id === "vid_new" ? generatingVideo : mockVideo
-  const isGenerating = video.status === "generating"
-  const currentJob = video.jobs[0]
+  const [video, setVideo] = useState<Video | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!params.id) return
+
+    let cancelled = false
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+    async function fetchVideo() {
+      try {
+        const data = await apiFetch<Video>(`/videos/${params.id}`)
+        if (cancelled) return
+        setVideo(data)
+        setError(null)
+
+        // If video has active jobs, fetch job details and poll
+        const hasActiveJobs = data.status === "generating" || data.status === "processing"
+        if (hasActiveJobs) {
+          try {
+            const jobs = await apiFetch<VideoJob[]>(`/jobs?video_id=${params.id}`)
+            if (cancelled) return
+            setVideo((prev) => prev ? { ...prev, jobs } : prev)
+          } catch {
+            // Jobs fetch is optional; keep the video data we have
+          }
+          // Poll every 5 seconds while generating
+          pollTimer = setTimeout(fetchVideo, 5000)
+        }
+      } catch (err: unknown) {
+        if (cancelled) return
+        const message = err instanceof Error ? err.message : "Failed to load video"
+        setError(message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchVideo()
+
+    return () => {
+      cancelled = true
+      if (pollTimer) clearTimeout(pollTimer)
+    }
+  }, [params.id])
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-foreground/40" />
+          <p className="text-[13px] text-foreground/50">Loading video...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !video) {
+    return (
+      <div className="p-8 lg:p-12">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-4 h-7 gap-1.5 rounded-lg px-2 text-[11px] text-foreground/50 hover:text-foreground"
+          asChild
+        >
+          <Link href="/videos">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </Link>
+        </Button>
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertCircle className="h-8 w-8 text-foreground/20 mb-3" />
+          <h2 className="text-[15px] font-medium text-foreground">Video not found</h2>
+          <p className="mt-1 text-[13px] text-foreground/50">
+            {error || "The requested video could not be found."}
+          </p>
+          <Button
+            variant="outline"
+            className="mt-6 h-8 rounded-lg border-foreground/10 px-4 text-[12px]"
+            asChild
+          >
+            <Link href="/videos">Back to Videos</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const isGenerating = video.status === "generating" || video.status === "processing"
+  const currentJob = video.jobs?.[0]
 
   return (
     <div className="p-8 lg:p-12">
@@ -111,7 +185,7 @@ export default function VideoDetailPage() {
             Back
           </Link>
         </Button>
-        
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3">
@@ -121,17 +195,17 @@ export default function VideoDetailPage() {
               <span className={cn(
                 "rounded-md px-2 py-0.5 text-[10px] font-medium",
                 video.status === "ready" && "bg-foreground text-background",
-                video.status === "generating" && "bg-foreground/10 text-foreground",
+                (video.status === "generating" || video.status === "processing") && "bg-foreground/10 text-foreground",
                 video.status === "failed" && "bg-destructive/10 text-destructive"
               )}>
-                {video.status === "ready" ? "Ready" : video.status === "generating" ? "Generating" : "Failed"}
+                {video.status === "ready" ? "Ready" : (video.status === "generating" || video.status === "processing") ? "Generating" : video.status === "failed" ? "Failed" : video.status}
               </span>
             </div>
             <p className="mt-1 text-[12px] text-foreground/50">
-              {video.channel.name} · {new Date(video.created_at).toLocaleDateString()}
+              {video.channel?.name} · {new Date(video.created_at).toLocaleDateString()}
             </p>
           </div>
-          
+
           <div className="flex gap-2">
             {video.status === "ready" && (
               <>
@@ -160,7 +234,7 @@ export default function VideoDetailPage() {
       </div>
 
       {/* Generating Progress */}
-      {isGenerating && "stages" in currentJob && (
+      {isGenerating && currentJob && "stages" in currentJob && currentJob.stages && (
         <div className="mb-8 rounded-xl border border-foreground/10 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-foreground" />
@@ -172,11 +246,13 @@ export default function VideoDetailPage() {
               <span className="font-medium text-foreground">{currentJob.progress_pct}%</span>
             </div>
             <Progress value={currentJob.progress_pct} className="h-1" />
-            <p className="mt-2 text-[11px] text-foreground/40">
-              ~{Math.ceil(currentJob.estimated_seconds_remaining / 60)} min remaining
-            </p>
+            {currentJob.estimated_seconds_remaining != null && (
+              <p className="mt-2 text-[11px] text-foreground/40">
+                ~{Math.ceil(currentJob.estimated_seconds_remaining / 60)} min remaining
+              </p>
+            )}
           </div>
-          
+
           <div className="flex gap-2">
             {currentJob.stages.map((stage) => (
               <div
@@ -242,26 +318,30 @@ export default function VideoDetailPage() {
               </div>
 
               {/* Description */}
-              <div>
-                <h3 className="mb-2 text-[12px] font-medium text-foreground/50 uppercase tracking-wider">Description</h3>
-                <p className="text-[13px] leading-relaxed text-foreground/70">{video.description}</p>
-              </div>
+              {video.description && (
+                <div>
+                  <h3 className="mb-2 text-[12px] font-medium text-foreground/50 uppercase tracking-wider">Description</h3>
+                  <p className="text-[13px] leading-relaxed text-foreground/70">{video.description}</p>
+                </div>
+              )}
 
               {/* Tags */}
-              <div>
-                <h3 className="mb-2 text-[12px] font-medium text-foreground/50 uppercase tracking-wider">Tags</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {video.tags.map((tag) => (
-                    <span key={tag} className="rounded-md bg-foreground/5 px-2 py-0.5 text-[11px] text-foreground/70">
-                      {tag}
-                    </span>
-                  ))}
+              {video.tags && video.tags.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-[12px] font-medium text-foreground/50 uppercase tracking-wider">Tags</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {video.tags.map((tag) => (
+                      <span key={tag} className="rounded-md bg-foreground/5 px-2 py-0.5 text-[11px] text-foreground/70">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {activeTab === "script" && (
+          {activeTab === "script" && video.script_json && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-[14px] font-medium text-foreground">Script</h2>
@@ -270,7 +350,7 @@ export default function VideoDetailPage() {
                   Copy
                 </Button>
               </div>
-              
+
               <div className="rounded-xl border border-foreground/10 divide-y divide-foreground/10">
                 <div className="p-4">
                   <p className="text-[10px] font-medium text-foreground/40 uppercase tracking-wider mb-1">Hook</p>
@@ -296,7 +376,13 @@ export default function VideoDetailPage() {
             </div>
           )}
 
-          {activeTab === "assets" && (
+          {activeTab === "script" && !video.script_json && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <p className="text-[13px] text-foreground/50">Script not available yet.</p>
+            </div>
+          )}
+
+          {activeTab === "assets" && video.script_json && (
             <div>
               <h2 className="mb-4 text-[14px] font-medium text-foreground">Generated Assets</h2>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -312,6 +398,12 @@ export default function VideoDetailPage() {
               </div>
             </div>
           )}
+
+          {activeTab === "assets" && !video.script_json && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <p className="text-[13px] text-foreground/50">Assets not available yet.</p>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -322,9 +414,9 @@ export default function VideoDetailPage() {
             <div className="rounded-xl border border-foreground/10 divide-y divide-foreground/10">
               {[
                 { label: "Duration", value: formatDuration(video.duration_seconds) },
-                { label: "Style", value: video.style },
-                { label: "Voice", value: video.voice },
-                { label: "Format", value: video.format },
+                { label: "Style", value: video.style || "-" },
+                { label: "Voice", value: video.voice || "-" },
+                { label: "Format", value: video.format || "-" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3">
                   <span className="text-[11px] text-foreground/50">{item.label}</span>
@@ -335,29 +427,31 @@ export default function VideoDetailPage() {
           </div>
 
           {/* Cost */}
-          <div>
-            <h2 className="mb-3 text-[12px] font-medium text-foreground/50 uppercase tracking-wider flex items-center gap-1.5">
-              <DollarSign className="h-3.5 w-3.5" />
-              Cost Breakdown
-            </h2>
-            <div className="rounded-xl border border-foreground/10 divide-y divide-foreground/10">
-              {[
-                { label: "Script", value: video.cost_breakdown.script },
-                { label: "Voiceover", value: video.cost_breakdown.voiceover },
-                { label: "Images", value: video.cost_breakdown.images },
-                { label: "Whisper", value: video.cost_breakdown.whisper },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between p-3">
-                  <span className="text-[11px] text-foreground/50">{item.label}</span>
-                  <span className="text-[11px] text-foreground">${item.value.toFixed(2)}</span>
+          {video.cost_breakdown && (
+            <div>
+              <h2 className="mb-3 text-[12px] font-medium text-foreground/50 uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Cost Breakdown
+              </h2>
+              <div className="rounded-xl border border-foreground/10 divide-y divide-foreground/10">
+                {[
+                  { label: "Script", value: video.cost_breakdown.script },
+                  { label: "Voiceover", value: video.cost_breakdown.voiceover },
+                  { label: "Images", value: video.cost_breakdown.images },
+                  { label: "Whisper", value: video.cost_breakdown.whisper },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between p-3">
+                    <span className="text-[11px] text-foreground/50">{item.label}</span>
+                    <span className="text-[11px] text-foreground">${item.value.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between p-3 bg-foreground/[0.02]">
+                  <span className="text-[11px] font-medium text-foreground">Total</span>
+                  <span className="text-[13px] font-semibold text-foreground">${video.cost_breakdown.total.toFixed(2)}</span>
                 </div>
-              ))}
-              <div className="flex items-center justify-between p-3 bg-foreground/[0.02]">
-                <span className="text-[11px] font-medium text-foreground">Total</span>
-                <span className="text-[13px] font-semibold text-foreground">${video.cost_breakdown.total.toFixed(2)}</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

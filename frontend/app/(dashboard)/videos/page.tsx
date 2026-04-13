@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,17 +25,21 @@ import {
   Loader2,
   Play,
 } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
-const mockVideos = [
-  { id: "vid_120", title: "The Hidden System Banks Use to Control Money", status: "ready", duration: 504, style: "Oil Painting", channel: "Wealth Wisdom", created: "2026-04-07T08:30:00Z" },
-  { id: "vid_119", title: "Why 99% of People Fail at Investing", status: "ready", duration: 615, style: "Cinematic", channel: "Wealth Wisdom", created: "2026-04-06T14:20:00Z" },
-  { id: "vid_118", title: "The Dark Truth About Credit Cards", status: "uploaded", duration: 465, style: "Dark Noir", channel: "Wealth Wisdom", created: "2026-04-05T10:15:00Z", youtube: true },
-  { id: "vid_117", title: "5 AI Tools That Will Replace Your Job", status: "generating", duration: 0, style: "Sci-Fi", channel: "Tech Explained", created: "2026-04-07T09:45:00Z" },
-  { id: "vid_116", title: "Bitcoin vs Gold: The Ultimate Comparison", status: "failed", duration: 0, style: "Corporate", channel: "Daily Finance", created: "2026-04-04T16:00:00Z" },
-  { id: "vid_115", title: "How The Rich Avoid Paying Taxes Legally", status: "uploaded", duration: 720, style: "Oil Painting", channel: "Wealth Wisdom", created: "2026-04-03T12:00:00Z", youtube: true },
-]
+interface VideoItem {
+  id: string
+  title: string
+  status: string
+  duration: number
+  style?: string
+  channel?: string
+  created_at?: string
+  created?: string
+  youtube?: boolean
+}
 
-const statusConfig = {
+const statusConfig: Record<string, { icon: typeof CheckCircle2; color: string; label: string; animate?: boolean }> = {
   ready: { icon: CheckCircle2, color: "text-emerald-600", label: "Ready" },
   uploaded: { icon: Play, color: "text-primary", label: "Live" },
   generating: { icon: Loader2, color: "text-amber-600", label: "Processing", animate: true },
@@ -47,7 +51,8 @@ function formatDuration(s: number) {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`
 }
 
-function formatDate(d: string) {
+function formatDate(d?: string) {
+  if (!d) return "-"
   const h = Math.floor((Date.now() - new Date(d).getTime()) / 3600000)
   if (h < 1) return "Just now"
   if (h < 24) return `${h}h ago`
@@ -58,8 +63,26 @@ function formatDate(d: string) {
 export default function VideosPage() {
   const [filter, setFilter] = useState("all")
   const [search, setSearch] = useState("")
+  const [videos, setVideos] = useState<VideoItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filtered = mockVideos.filter((v) => {
+  const fetchVideos = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await apiFetch<VideoItem[]>("/videos")
+      setVideos(data ?? [])
+    } catch {
+      setVideos([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchVideos()
+  }, [fetchVideos])
+
+  const filtered = videos.filter((v) => {
     const matchStatus = filter === "all" || v.status === filter
     const matchSearch = v.title.toLowerCase().includes(search.toLowerCase())
     return matchStatus && matchSearch
@@ -107,80 +130,121 @@ export default function VideosPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border/60">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border/60 bg-muted/30">
-              <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Title</th>
-              <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Duration</th>
-              <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Channel</th>
-              <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Created</th>
-              <th className="w-10 px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {filtered.map((video) => {
-              const status = statusConfig[video.status as keyof typeof statusConfig]
-              const StatusIcon = status.icon
-              return (
-                <tr key={video.id} className="transition-colors hover:bg-muted/20">
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="overflow-hidden rounded-xl border border-border/60">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border/60 bg-muted/30">
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Title</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Duration</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Channel</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Created</th>
+                <th className="w-10 px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <tr key={i}>
                   <td className="px-4 py-3">
-                    <Link href={`/videos/${video.id}`} className="group flex items-center gap-3">
-                      <div className="flex h-9 w-14 items-center justify-center rounded-md bg-muted/50">
-                        <Video className="h-4 w-4 text-muted-foreground/40" />
-                      </div>
-                      <span className="text-[13px] font-medium transition-colors group-hover:text-primary">{video.title}</span>
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-14 rounded-md bg-muted/50 animate-pulse" />
+                      <div className="h-3.5 w-48 bg-muted/50 rounded animate-pulse" />
+                    </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1.5 text-[12px] ${status.color}`}>
-                      <StatusIcon className={`h-3.5 w-3.5 ${status.animate ? "animate-spin" : ""}`} />
-                      {status.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-muted-foreground">{formatDuration(video.duration)}</td>
-                  <td className="px-4 py-3 text-[13px] text-muted-foreground">{video.channel}</td>
-                  <td className="px-4 py-3 text-[13px] text-muted-foreground">{formatDate(video.created)}</td>
-                  <td className="px-4 py-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        {video.status === "ready" && (
-                          <DropdownMenuItem className="text-[13px]">
-                            <Download className="mr-2 h-3.5 w-3.5" /> Download
-                          </DropdownMenuItem>
-                        )}
-                        {video.youtube && (
-                          <DropdownMenuItem className="text-[13px]">
-                            <ExternalLink className="mr-2 h-3.5 w-3.5" /> YouTube
-                          </DropdownMenuItem>
-                        )}
-                        {video.status === "failed" && (
-                          <DropdownMenuItem className="text-[13px]">
-                            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-[13px] text-destructive">
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
+                  <td className="px-4 py-3"><div className="h-3 w-16 bg-muted/50 rounded animate-pulse" /></td>
+                  <td className="px-4 py-3"><div className="h-3 w-10 bg-muted/50 rounded animate-pulse" /></td>
+                  <td className="px-4 py-3"><div className="h-3 w-24 bg-muted/50 rounded animate-pulse" /></td>
+                  <td className="px-4 py-3"><div className="h-3 w-16 bg-muted/50 rounded animate-pulse" /></td>
+                  <td className="px-4 py-3"></td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {filtered.length === 0 && (
+      {/* Table */}
+      {!loading && filtered.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-border/60">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border/60 bg-muted/30">
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Title</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Duration</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Channel</th>
+                <th className="px-4 py-3 text-left text-[12px] font-medium text-muted-foreground">Created</th>
+                <th className="w-10 px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {filtered.map((video) => {
+                const status = statusConfig[video.status as keyof typeof statusConfig]
+                const StatusIcon = status?.icon ?? AlertCircle
+                const statusColor = status?.color ?? "text-muted-foreground"
+                const statusLabel = status?.label ?? video.status
+                const statusAnimate = status?.animate ?? false
+                const dateStr = video.created_at || video.created
+                return (
+                  <tr key={video.id} className="transition-colors hover:bg-muted/20">
+                    <td className="px-4 py-3">
+                      <Link href={`/videos/${video.id}`} className="group flex items-center gap-3">
+                        <div className="flex h-9 w-14 items-center justify-center rounded-md bg-muted/50">
+                          <Video className="h-4 w-4 text-muted-foreground/40" />
+                        </div>
+                        <span className="text-[13px] font-medium transition-colors group-hover:text-primary">{video.title}</span>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 text-[12px] ${statusColor}`}>
+                        <StatusIcon className={`h-3.5 w-3.5 ${statusAnimate ? "animate-spin" : ""}`} />
+                        {statusLabel}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[13px] text-muted-foreground">{formatDuration(video.duration)}</td>
+                    <td className="px-4 py-3 text-[13px] text-muted-foreground">{video.channel || "-"}</td>
+                    <td className="px-4 py-3 text-[13px] text-muted-foreground">{formatDate(dateStr)}</td>
+                    <td className="px-4 py-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          {video.status === "ready" && (
+                            <DropdownMenuItem className="text-[13px]">
+                              <Download className="mr-2 h-3.5 w-3.5" /> Download
+                            </DropdownMenuItem>
+                          )}
+                          {video.youtube && (
+                            <DropdownMenuItem className="text-[13px]">
+                              <ExternalLink className="mr-2 h-3.5 w-3.5" /> YouTube
+                            </DropdownMenuItem>
+                          )}
+                          {video.status === "failed" && (
+                            <DropdownMenuItem className="text-[13px]">
+                              <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-[13px] text-destructive">
+                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
         <div className="flex flex-col items-center py-16 text-center">
           <Video className="h-10 w-10 text-muted-foreground/30" strokeWidth={1.5} />
           <p className="mt-4 text-[14px] font-medium">No videos found</p>

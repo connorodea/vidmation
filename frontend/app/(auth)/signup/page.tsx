@@ -27,12 +27,35 @@ export default function SignupPage() {
 
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean)
 
+  const [error, setError] = useState("")
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isPasswordValid) return
+    setError("")
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    router.push("/dashboard")
+
+    try {
+      const res = await fetch("/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || "Signup failed")
+      }
+
+      const tokens = await res.json()
+      localStorage.setItem("access_token", tokens.access_token)
+      localStorage.setItem("refresh_token", tokens.refresh_token)
+      router.push("/dashboard")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Signup failed")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -49,8 +72,11 @@ export default function SignupPage() {
             Create account
           </h1>
           <p className="mt-2 text-[13px] text-foreground/50">
-            Get started with 3 free videos
+            Get started with 5 free videos
           </p>
+          {error && (
+            <p className="mt-3 text-[13px] text-destructive">{error}</p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
