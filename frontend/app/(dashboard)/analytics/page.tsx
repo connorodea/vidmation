@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Select,
   SelectContent,
@@ -8,31 +8,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Loader2 } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
-const mockAnalytics = {
-  total_cost: 45.20,
-  total_calls: 1250,
-  videos_generated: 42,
-  by_service: [
-    { name: "Flux Images", cost: 18.30 },
-    { name: "OpenAI TTS", cost: 12.50 },
-    { name: "GPT-4o", cost: 10.40 },
-    { name: "Whisper", cost: 4.00 },
-  ],
-  daily_trend: [
-    { date: "1", cost: 3.20 },
-    { date: "2", cost: 4.80 },
-    { date: "3", cost: 2.40 },
-    { date: "4", cost: 5.60 },
-    { date: "5", cost: 6.20 },
-    { date: "6", cost: 4.40 },
-    { date: "7", cost: 3.80 },
-  ],
+interface BillingUsage {
+  videos_generated: number
+  videos_limit: number
+  can_generate: boolean
 }
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState("weekly")
-  const maxCost = Math.max(...mockAnalytics.daily_trend.map((d) => d.cost))
+  const [usage, setUsage] = useState<BillingUsage | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        setError(null)
+        const data = await apiFetch<BillingUsage>("/billing/usage")
+        setUsage(data)
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to load analytics"
+        setError(message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchUsage()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-foreground/40" />
+      </div>
+    )
+  }
 
   return (
     <div className="p-8 lg:p-12">
@@ -56,63 +69,68 @@ export default function AnalyticsPage() {
         </Select>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-[13px] text-destructive">
+          {error}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="mt-10 grid gap-6 sm:grid-cols-3">
         <div>
-          <p className="text-[12px] font-medium text-foreground/50">Total Cost</p>
-          <p className="mt-1 text-[40px] font-semibold tracking-tight">${mockAnalytics.total_cost.toFixed(2)}</p>
-        </div>
-        <div>
-          <p className="text-[12px] font-medium text-foreground/50">Videos</p>
-          <p className="mt-1 text-[40px] font-semibold tracking-tight">{mockAnalytics.videos_generated}</p>
-        </div>
-        <div>
-          <p className="text-[12px] font-medium text-foreground/50">Avg. Cost</p>
+          <p className="text-[12px] font-medium text-foreground/50">Videos Generated</p>
           <p className="mt-1 text-[40px] font-semibold tracking-tight">
-            ${(mockAnalytics.total_cost / mockAnalytics.videos_generated).toFixed(2)}
+            {usage?.videos_generated ?? 0}
+          </p>
+        </div>
+        <div>
+          <p className="text-[12px] font-medium text-foreground/50">Videos Limit</p>
+          <p className="mt-1 text-[40px] font-semibold tracking-tight">
+            {usage?.videos_limit ?? 0}
+          </p>
+        </div>
+        <div>
+          <p className="text-[12px] font-medium text-foreground/50">Can Generate</p>
+          <p className="mt-1 text-[40px] font-semibold tracking-tight">
+            {usage?.can_generate ? "Yes" : "No"}
           </p>
         </div>
       </div>
 
-      {/* Chart */}
+      {/* Usage Bar */}
+      {usage && usage.videos_limit > 0 && (
+        <div className="mt-8">
+          <div className="mb-1.5 flex items-center justify-between text-[12px]">
+            <span className="text-foreground/60">Usage</span>
+            <span className="font-medium">
+              {usage.videos_generated} / {usage.videos_limit}
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-foreground/10">
+            <div
+              className="h-full rounded-full bg-foreground transition-all"
+              style={{
+                width: `${Math.min((usage.videos_generated / usage.videos_limit) * 100, 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Daily Trend - Empty State */}
       <div className="mt-12">
         <h2 className="text-[15px] font-semibold">Daily Trend</h2>
-        <div className="mt-6 flex h-48 items-end gap-2">
-          {mockAnalytics.daily_trend.map((day, i) => (
-            <div key={i} className="flex flex-1 flex-col items-center gap-3">
-              <div className="relative w-full flex justify-center">
-                <div
-                  className="w-full max-w-[40px] rounded-t-lg bg-foreground transition-all hover:bg-foreground/80"
-                  style={{ height: `${(day.cost / maxCost) * 160}px`, minHeight: "4px" }}
-                />
-              </div>
-              <div className="text-center">
-                <p className="text-[13px] font-medium">${day.cost.toFixed(0)}</p>
-                <p className="text-[11px] text-foreground/40">Apr {day.date}</p>
-              </div>
-            </div>
-          ))}
+        <div className="mt-6 flex h-48 items-center justify-center rounded-xl border border-foreground/10">
+          <p className="text-[13px] text-foreground/40">Analytics data coming soon</p>
         </div>
       </div>
 
-      {/* By Service */}
+      {/* By Service - Empty State */}
       <div className="mt-12">
         <h2 className="text-[15px] font-semibold">By Service</h2>
-        <div className="mt-4 rounded-xl border border-foreground/10 divide-y divide-foreground/10">
-          {mockAnalytics.by_service.map((service, i) => {
-            const percentage = (service.cost / mockAnalytics.total_cost) * 100
-            return (
-              <div key={i} className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-[14px] font-medium">{service.name}</span>
-                  <div className="hidden sm:block h-1.5 w-32 overflow-hidden rounded-full bg-foreground/10">
-                    <div className="h-full rounded-full bg-foreground" style={{ width: `${percentage}%` }} />
-                  </div>
-                </div>
-                <span className="text-[14px] font-semibold">${service.cost.toFixed(2)}</span>
-              </div>
-            )
-          })}
+        <div className="mt-4 flex items-center justify-center rounded-xl border border-foreground/10 py-12">
+          <p className="text-[13px] text-foreground/40">Analytics data coming soon</p>
         </div>
       </div>
     </div>

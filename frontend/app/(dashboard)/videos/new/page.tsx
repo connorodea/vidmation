@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
-import { ArrowLeft, ArrowRight, Sparkles, Play, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight, Sparkles, Play, Check, Loader2, AlertCircle } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
 const steps = ["Topic", "Script", "Voice", "Visuals", "Generate"]
 
@@ -37,21 +38,18 @@ const durations = [
   { id: "long", name: "Long", time: "10-15 min", cost: "$1.00" },
 ]
 
-const channels = [
-  { id: "ch_1", name: "Wealth Wisdom" },
-  { id: "ch_2", name: "Tech Explained" },
-]
+interface Channel {
+  id: string
+  name: string
+}
 
-const mockScript = {
-  title: "The Hidden Psychology of Wealth Building",
-  hook: "What if everything you believed about getting rich was completely wrong?",
-  sections: [
-    { heading: "The Wealth Mindset", narration: "Most people think wealth is about making more money. But studies show that 80% of millionaires are self-made..." },
-    { heading: "The Compound Effect", narration: "Albert Einstein once called compound interest the eighth wonder of the world..." },
-  ],
-  outro: "If you found this valuable, subscribe and hit the bell icon.",
-  estimated_duration: "8-10 min",
-  total_words: 1200,
+interface GeneratedScript {
+  title: string
+  hook: string
+  sections: { heading: string; narration: string }[]
+  outro: string
+  estimated_duration?: string
+  total_words?: number
 }
 
 export default function CreateVideoPage() {
@@ -60,25 +58,87 @@ export default function CreateVideoPage() {
   const [isGeneratingScript, setIsGeneratingScript] = useState(false)
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
   const [scriptGenerated, setScriptGenerated] = useState(false)
-  
+  const [generateError, setGenerateError] = useState<string | null>(null)
+
   const [topic, setTopic] = useState("")
   const [channelId, setChannelId] = useState("")
   const [duration, setDuration] = useState("medium")
   const [style, setStyle] = useState("oil_painting")
   const [voice, setVoice] = useState("onyx")
-  const [script, setScript] = useState(mockScript)
+  const [script, setScript] = useState<GeneratedScript>({
+    title: "",
+    hook: "",
+    sections: [],
+    outro: "",
+  })
+
+  // Channels fetched from API
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [channelsLoading, setChannelsLoading] = useState(true)
+  const [channelsError, setChannelsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchChannels() {
+      try {
+        const data = await apiFetch<Channel[]>("/channels")
+        if (!cancelled) {
+          setChannels(data)
+          setChannelsError(null)
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : "Failed to load channels"
+          setChannelsError(message)
+        }
+      } finally {
+        if (!cancelled) setChannelsLoading(false)
+      }
+    }
+
+    fetchChannels()
+    return () => { cancelled = true }
+  }, [])
 
   const handleGenerateScript = async () => {
     setIsGeneratingScript(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setScriptGenerated(true)
-    setIsGeneratingScript(false)
+    setGenerateError(null)
+    try {
+      const data = await apiFetch<GeneratedScript>("/scripts/generate", {
+        method: "POST",
+        body: JSON.stringify({ topic, channel_id: channelId, duration }),
+      })
+      setScript(data)
+      setScriptGenerated(true)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to generate script"
+      setGenerateError(message)
+    } finally {
+      setIsGeneratingScript(false)
+    }
   }
 
   const handleGenerateVideo = async () => {
     setIsGeneratingVideo(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    router.push("/videos/vid_new?generating=true")
+    setGenerateError(null)
+    try {
+      const data = await apiFetch<{ id: string }>("/videos", {
+        method: "POST",
+        body: JSON.stringify({
+          topic,
+          channel_id: channelId,
+          format: duration,
+          voice,
+          visual_style: style,
+        }),
+      })
+      router.push(`/videos/${data.id}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create video"
+      setGenerateError(message)
+      setIsGeneratingVideo(false)
+    }
   }
 
   const canProceed = () => {
@@ -122,6 +182,14 @@ export default function CreateVideoPage() {
           ))}
         </div>
 
+        {/* Error Banner */}
+        {generateError && (
+          <div className="mt-6 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+            <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+            <p className="text-[13px] text-destructive">{generateError}</p>
+          </div>
+        )}
+
         {/* Step Content */}
         <div className="mt-10">
           {/* Step 1: Topic */}
@@ -141,16 +209,32 @@ export default function CreateVideoPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-[13px] font-medium">Channel</Label>
-                  <Select value={channelId} onValueChange={setChannelId}>
-                    <SelectTrigger className="h-10 rounded-xl border-foreground/10 bg-transparent text-[13px]">
-                      <SelectValue placeholder="Select channel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {channels.map((ch) => (
-                        <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {channelsLoading ? (
+                    <div className="flex h-10 items-center gap-2 rounded-xl border border-foreground/10 px-3">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground/40" />
+                      <span className="text-[13px] text-foreground/40">Loading channels...</span>
+                    </div>
+                  ) : channelsError ? (
+                    <div className="flex h-10 items-center gap-2 rounded-xl border border-destructive/20 px-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                      <span className="text-[12px] text-destructive">{channelsError}</span>
+                    </div>
+                  ) : channels.length === 0 ? (
+                    <div className="flex h-10 items-center rounded-xl border border-foreground/10 px-3">
+                      <span className="text-[13px] text-foreground/40">No channels available</span>
+                    </div>
+                  ) : (
+                    <Select value={channelId} onValueChange={setChannelId}>
+                      <SelectTrigger className="h-10 rounded-xl border-foreground/10 bg-transparent text-[13px]">
+                        <SelectValue placeholder="Select channel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {channels.map((ch) => (
+                          <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[13px] font-medium">Duration</Label>
@@ -238,10 +322,14 @@ export default function CreateVideoPage() {
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border border-foreground/10 p-4">
-                    <span className="text-[13px] text-foreground/60">Estimated duration</span>
-                    <span className="text-[13px] font-medium">{script.estimated_duration} · {script.total_words} words</span>
-                  </div>
+                  {(script.estimated_duration || script.total_words) && (
+                    <div className="flex items-center justify-between rounded-xl border border-foreground/10 p-4">
+                      <span className="text-[13px] text-foreground/60">Estimated duration</span>
+                      <span className="text-[13px] font-medium">
+                        {script.estimated_duration || "-"}{script.total_words ? ` · ${script.total_words} words` : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -365,7 +453,7 @@ export default function CreateVideoPage() {
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
           </Button>
-          
+
           {currentStep < 4 && (
             <Button
               className="h-10 gap-1.5 rounded-full bg-foreground px-6 text-[13px] font-medium text-background hover:bg-foreground/90"

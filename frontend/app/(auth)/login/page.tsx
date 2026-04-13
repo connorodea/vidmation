@@ -23,14 +23,23 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      if (email && password) {
-        router.push("/dashboard")
-      } else {
-        setError("Please enter your email and password")
+      const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || "Invalid email or password")
       }
-    } catch {
-      setError("Invalid email or password")
+
+      const tokens = await res.json()
+      localStorage.setItem("access_token", tokens.access_token)
+      localStorage.setItem("refresh_token", tokens.refresh_token)
+      router.push("/dashboard")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed")
     } finally {
       setIsLoading(false)
     }
