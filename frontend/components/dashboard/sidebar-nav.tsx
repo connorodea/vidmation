@@ -1,9 +1,12 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Logo } from "@/components/logo"
+import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api"
 import {
   LayoutDashboard,
   Video,
@@ -29,7 +32,7 @@ const nav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Videos", href: "/videos", icon: Video },
   { name: "Channels", href: "/channels", icon: Radio },
-  { name: "Jobs", href: "/jobs", icon: ListTodo, badge: 2 },
+  { name: "Jobs", href: "/jobs", icon: ListTodo },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Content", href: "/content", icon: Calendar },
   { name: "Voices", href: "/voices", icon: Mic2 },
@@ -38,6 +41,25 @@ const nav = [
 
 export function SidebarNav() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, logout } = useAuth()
+  const [runningJobs, setRunningJobs] = useState(0)
+
+  // Fetch running job count
+  useEffect(() => {
+    apiFetch<{ id: string }[]>("/jobs?status=running")
+      .then((jobs) => setRunningJobs(Array.isArray(jobs) ? jobs.length : 0))
+      .catch(() => setRunningJobs(0))
+  }, [pathname])
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/login")
+  }
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?"
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-[200px] flex-col border-r border-foreground/[0.06] bg-background">
@@ -50,6 +72,7 @@ export function SidebarNav() {
       <nav className="flex-1 px-3 py-1">
         {nav.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/")
+          const badge = item.name === "Jobs" && runningJobs > 0 ? runningJobs : null
           return (
             <Link
               key={item.name}
@@ -63,12 +86,12 @@ export function SidebarNav() {
             >
               <item.icon className="h-4 w-4" strokeWidth={1.5} />
               {item.name}
-              {item.badge && (
+              {badge && (
                 <span className={cn(
                   "ml-auto text-[10px] font-medium rounded-full px-1.5 py-0.5 min-w-[18px] text-center",
                   active ? "bg-background/20 text-background" : "bg-foreground/10 text-foreground/60"
                 )}>
-                  {item.badge}
+                  {badge}
                 </span>
               )}
             </Link>
@@ -96,9 +119,11 @@ export function SidebarNav() {
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-foreground/[0.03] transition-colors">
               <div className="h-7 w-7 rounded-full bg-foreground text-background flex items-center justify-center text-[11px] font-medium">
-                U
+                {initials}
               </div>
-              <span className="flex-1 text-left text-[13px] font-medium truncate">User</span>
+              <span className="flex-1 text-left text-[13px] font-medium truncate">
+                {user?.name || "User"}
+              </span>
               <ChevronDown className="h-3.5 w-3.5 text-foreground/30" />
             </button>
           </DropdownMenuTrigger>
@@ -110,11 +135,12 @@ export function SidebarNav() {
               <Link href="/settings">Billing</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1" />
-            <DropdownMenuItem asChild className="rounded-lg text-[13px] cursor-pointer">
-              <Link href="/login" className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </Link>
+            <DropdownMenuItem
+              className="rounded-lg text-[13px] cursor-pointer text-destructive"
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
