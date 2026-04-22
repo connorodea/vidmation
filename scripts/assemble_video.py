@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Production video assembler — creates a real 8-10 min faceless YouTube video.
 
-Usage: cd ~/Developer/vidmation && python3 scripts/assemble_video.py
+Usage: cd ~/Developer/aividio && python3 scripts/assemble_video.py
 """
 import json, subprocess, math, os, sys, time, shutil
 from pathlib import Path

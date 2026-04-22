@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from vidmation.config.profiles import ChannelProfile
-from vidmation.models.video import VideoFormat
-from vidmation.pipeline.context import PipelineContext
+from aividio.config.profiles import ChannelProfile
+from aividio.models.video import VideoFormat
+from aividio.pipeline.context import PipelineContext
 
 
 @pytest.fixture

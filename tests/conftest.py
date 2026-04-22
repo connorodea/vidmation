@@ -8,13 +8,13 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from vidmation.models.base import Base
+from aividio.models.base import Base
 
 
 @pytest.fixture
 def tmp_dir():
     """Create a temporary directory for test artifacts."""
-    with tempfile.TemporaryDirectory(prefix="vidmation_test_") as d:
+    with tempfile.TemporaryDirectory(prefix="aividio_test_") as d:
         yield Path(d)
 
 

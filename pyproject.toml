@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vidmation"
+name = "aividio"
 version = "0.1.0"
 description = "AI-powered faceless YouTube video automation platform"
 readme = "README.md"
@@ -91,19 +91,19 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/connorodea/vidmation"
-Repository = "https://github.com/connorodea/vidmation"
-Issues = "https://github.com/connorodea/vidmation/issues"
+Homepage = "https://github.com/connorodea/aividio"
+Repository = "https://github.com/connorodea/aividio"
+Issues = "https://github.com/connorodea/aividio/issues"
 
 [project.optional-dependencies]
 redis = ["redis>=5.0", "rq>=1.16"]
 dev = ["pytest>=8.0", "pytest-asyncio", "ruff", "mypy"]
 
 [project.scripts]
-vidmation = "vidmation.cli.app:app"
+aividio = "aividio.cli.app:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vidmation"]
+packages = ["src/aividio"]
 
 [tool.ruff]
 target-version = "py311"

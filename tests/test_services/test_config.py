@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from vidmation.config.profiles import (
+from aividio.config.profiles import (
     ChannelProfile,
     ContentConfig,
     MusicConfig,
@@ -16,7 +16,7 @@ from vidmation.config.profiles import (
     get_default_profile,
     load_profile,
 )
-from vidmation.config.settings import Settings
+from aividio.config.settings import Settings
 
 
 class TestSettings:
@@ -27,7 +27,7 @@ class TestSettings:
         monkeypatch.delenv("VIDMATION_DEFAULT_IMAGE_PROVIDER", raising=False)
         monkeypatch.delenv("VIDMATION_DEFAULT_VIDEO_FORMAT", raising=False)
         settings = Settings(_env_file=None)
-        assert settings.database_url == "sqlite:///data/vidmation.db"
+        assert settings.database_url == "sqlite:///data/aividio.db"
         assert settings.web_port == 8000
         assert settings.default_llm_provider == "claude"
         assert settings.default_tts_provider == "elevenlabs"
