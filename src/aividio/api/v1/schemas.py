@@ -1,4 +1,4 @@
-"""Pydantic v2 request/response schemas for the VIDMATION public API."""
+"""Pydantic v2 request/response schemas for the AIVIDIO public API."""
 
 from __future__ import annotations
 

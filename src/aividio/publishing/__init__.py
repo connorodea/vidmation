@@ -1,4 +1,4 @@
-"""Multi-platform publishing system for VIDMATION.
+"""Multi-platform publishing system for AIVIDIO.
 
 Provides a unified interface to publish videos to YouTube, TikTok,
 Instagram Reels, and future platforms via a single ``PublishManager``.

@@ -22,7 +22,7 @@ from typing import Any
 
 @dataclass
 class AgentConfig:
-    """Configuration for the VIDMATION AI agent orchestrator.
+    """Configuration for the AIVIDIO AI agent orchestrator.
 
     Controls model selection, iteration limits, budget caps, feature flags,
     and tool category filtering.

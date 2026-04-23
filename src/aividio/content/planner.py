@@ -181,7 +181,7 @@ class ContentPlanner:
         if not api_key:
             raise ValueError(
                 "anthropic_api_key is not configured.  "
-                "Set VIDMATION_ANTHROPIC_API_KEY in your environment."
+                "Set AIVIDIO_ANTHROPIC_API_KEY in your environment."
             )
         self._client = anthropic.Anthropic(api_key=api_key)
 

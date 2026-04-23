@@ -1,1 +1,1 @@
-"""VIDMATION public REST API — authentication, webhooks, and versioned routes."""
+"""AIVIDIO public REST API — authentication, webhooks, and versioned routes."""

@@ -1,4 +1,4 @@
-"""VIDMATION CLI design system — shared branding, colors, and styled components.
+"""AIVIDIO CLI design system — shared branding, colors, and styled components.
 
 Provides a consistent, premium visual language across all CLI commands.
 Inspired by modern CLIs (Vercel, Stripe, Railway).

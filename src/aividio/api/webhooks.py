@@ -124,7 +124,7 @@ class WebhookManager:
         """Deliver a single webhook with retry logic."""
         headers: dict[str, str] = {
             "Content-Type": "application/json",
-            "User-Agent": "VIDMATION-Webhooks/1.0",
+            "User-Agent": "AIVIDIO-Webhooks/1.0",
         }
         if webhook.secret:
             sig = _sign_payload(body_bytes, webhook.secret)
@@ -195,7 +195,7 @@ class WebhookManager:
                 "event": "webhook.test",
                 "delivery_id": str(uuid.uuid4()),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "data": {"message": "This is a test delivery from VIDMATION."},
+                "data": {"message": "This is a test delivery from AIVIDIO."},
             },
             default=str,
         )
@@ -203,7 +203,7 @@ class WebhookManager:
 
         headers: dict[str, str] = {
             "Content-Type": "application/json",
-            "User-Agent": "VIDMATION-Webhooks/1.0",
+            "User-Agent": "AIVIDIO-Webhooks/1.0",
         }
         if webhook.secret:
             sig = _sign_payload(body_bytes, webhook.secret)

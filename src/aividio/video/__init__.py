@@ -1,4 +1,4 @@
-"""Video assembly engine for VIDMATION.
+"""Video assembly engine for AIVIDIO.
 
 Submodules:
 - assembler: Main :class:`VideoAssembler` orchestration class.

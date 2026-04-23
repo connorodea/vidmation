@@ -1,4 +1,4 @@
-"""Advanced scheduling system for VIDMATION.
+"""Advanced scheduling system for AIVIDIO.
 
 Provides production-grade content scheduling with cron-based recurring
 generation, one-time publish scheduling, and optimal timing suggestions.

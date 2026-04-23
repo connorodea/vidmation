@@ -82,7 +82,7 @@ class ReplicateVideoGenerator(VideoGenerator):
         if not api_token:
             raise ValueError(
                 "replicate_api_token is not configured. "
-                "Set VIDMATION_REPLICATE_API_TOKEN in your environment."
+                "Set AIVIDIO_REPLICATE_API_TOKEN in your environment."
             )
         self._client = replicate.Client(api_token=api_token)
         self._model_id = model_id

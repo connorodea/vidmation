@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 _VCALENDAR_HEADER = """\
 BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//VIDMATION//Content Calendar//EN
+PRODID:-//AIVIDIO//Content Calendar//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:VIDMATION Content Calendar
+X-WR-CALNAME:AIVIDIO Content Calendar
 """
 
 _VEVENT_TEMPLATE = """\

@@ -1,6 +1,6 @@
 """Tool implementations for the AI agent orchestrator.
 
-Each tool wraps an existing VIDMATION service, providing a clean interface
+Each tool wraps an existing AIVIDIO service, providing a clean interface
 for the Claude agent to call.  Tools handle errors gracefully and return
 descriptive results that the agent can reason about.
 """

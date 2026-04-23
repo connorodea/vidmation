@@ -1,4 +1,4 @@
-"""FastAPI application factory for the VIDMATION web dashboard."""
+"""FastAPI application factory for the AIVIDIO web dashboard."""
 
 from __future__ import annotations
 

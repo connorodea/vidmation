@@ -308,7 +308,7 @@ class ContentRepurposer(BaseService):
         if not api_key:
             raise ValueError(
                 "openai_api_key is not configured. "
-                "Set VIDMATION_OPENAI_API_KEY in your environment."
+                "Set AIVIDIO_OPENAI_API_KEY in your environment."
             )
         self._client = openai.OpenAI(api_key=api_key)
 

@@ -38,7 +38,7 @@ class WhisperCaptionGenerator(BaseService):
             if not api_token:
                 raise ValueError(
                     "replicate_api_token is required for Whisper via Replicate. "
-                    "Set VIDMATION_REPLICATE_API_TOKEN in your environment."
+                    "Set AIVIDIO_REPLICATE_API_TOKEN in your environment."
                 )
             import replicate
 

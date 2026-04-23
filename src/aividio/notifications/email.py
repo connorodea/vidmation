@@ -1,11 +1,11 @@
 """Email notifier — sends HTML-formatted notifications via Resend or SMTP.
 
-Configuration (env vars with VIDMATION_ prefix):
-    VIDMATION_EMAIL_PROVIDER: "resend" | "smtp"  (default: "resend")
-    VIDMATION_EMAIL_FROM: sender address
-    VIDMATION_EMAIL_TO: comma-separated recipient addresses
-    VIDMATION_RESEND_API_KEY: Resend API key (if provider=resend)
-    VIDMATION_SMTP_HOST / _PORT / _USER / _PASSWORD: SMTP config
+Configuration (env vars with AIVIDIO_ prefix):
+    AIVIDIO_EMAIL_PROVIDER: "resend" | "smtp"  (default: "resend")
+    AIVIDIO_EMAIL_FROM: sender address
+    AIVIDIO_EMAIL_TO: comma-separated recipient addresses
+    AIVIDIO_RESEND_API_KEY: Resend API key (if provider=resend)
+    AIVIDIO_SMTP_HOST / _PORT / _USER / _PASSWORD: SMTP config
 """
 
 from __future__ import annotations
@@ -51,8 +51,8 @@ _TEMPLATES: dict[str, str] = {
 <!DOCTYPE html><html><head>{style}</head><body>
 <div class="container">
     <div class="header">
-        <span class="logo">V</span>
-        <span class="brand">VIDMATION</span>
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
     </div>
     <div class="card">
         <h2 class="card-title">{title}</h2>
@@ -62,7 +62,7 @@ _TEMPLATES: dict[str, str] = {
     <div style="text-align:center; margin-top:24px;">
         <span class="badge badge-success">Video Ready</span>
     </div>
-    <div class="footer">VIDMATION &mdash; AI Video Automation</div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation</div>
 </div>
 </body></html>
 """,
@@ -70,8 +70,8 @@ _TEMPLATES: dict[str, str] = {
 <!DOCTYPE html><html><head>{style}</head><body>
 <div class="container">
     <div class="header">
-        <span class="logo">V</span>
-        <span class="brand">VIDMATION</span>
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
     </div>
     <div class="card">
         <h2 class="card-title">{title}</h2>
@@ -81,7 +81,7 @@ _TEMPLATES: dict[str, str] = {
     <div style="text-align:center; margin-top:24px;">
         <span class="badge badge-error">Job Failed</span>
     </div>
-    <div class="footer">VIDMATION &mdash; AI Video Automation</div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation</div>
 </div>
 </body></html>
 """,
@@ -89,8 +89,8 @@ _TEMPLATES: dict[str, str] = {
 <!DOCTYPE html><html><head>{style}</head><body>
 <div class="container">
     <div class="header">
-        <span class="logo">V</span>
-        <span class="brand">VIDMATION</span>
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
     </div>
     <div class="card">
         <h2 class="card-title">{title}</h2>
@@ -100,7 +100,7 @@ _TEMPLATES: dict[str, str] = {
     <div style="text-align:center; margin-top:24px;">
         <span class="badge badge-success">Upload Complete</span>
     </div>
-    <div class="footer">VIDMATION &mdash; AI Video Automation</div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation</div>
 </div>
 </body></html>
 """,
@@ -108,8 +108,8 @@ _TEMPLATES: dict[str, str] = {
 <!DOCTYPE html><html><head>{style}</head><body>
 <div class="container">
     <div class="header">
-        <span class="logo">V</span>
-        <span class="brand">VIDMATION</span>
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
     </div>
     <div class="card">
         <h2 class="card-title">{title}</h2>
@@ -119,7 +119,45 @@ _TEMPLATES: dict[str, str] = {
     <div style="text-align:center; margin-top:24px;">
         <span class="badge badge-warning">Cost Alert</span>
     </div>
-    <div class="footer">VIDMATION &mdash; AI Video Automation</div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation</div>
+</div>
+</body></html>
+""",
+    "password_reset": """
+<!DOCTYPE html><html><head>{style}</head><body>
+<div class="container">
+    <div class="header">
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
+    </div>
+    <div class="card">
+        <h2 class="card-title">{title}</h2>
+        <p class="card-text">{message}</p>
+        {extra}
+    </div>
+    <div style="text-align:center; margin-top:24px;">
+        <span class="badge badge-info">Password Reset</span>
+    </div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation<br>If you didn't request this, you can safely ignore this email.</div>
+</div>
+</body></html>
+""",
+    "payment_failed": """
+<!DOCTYPE html><html><head>{style}</head><body>
+<div class="container">
+    <div class="header">
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
+    </div>
+    <div class="card">
+        <h2 class="card-title">{title}</h2>
+        <p class="card-text">{message}</p>
+        {extra}
+    </div>
+    <div style="text-align:center; margin-top:24px;">
+        <span class="badge badge-warning">Action Required</span>
+    </div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation</div>
 </div>
 </body></html>
 """,
@@ -127,15 +165,15 @@ _TEMPLATES: dict[str, str] = {
 <!DOCTYPE html><html><head>{style}</head><body>
 <div class="container">
     <div class="header">
-        <span class="logo">V</span>
-        <span class="brand">VIDMATION</span>
+        <span class="logo">A</span>
+        <span class="brand">AIVIDIO</span>
     </div>
     <div class="card">
         <h2 class="card-title">{title}</h2>
         <p class="card-text">{message}</p>
         {extra}
     </div>
-    <div class="footer">VIDMATION &mdash; AI Video Automation</div>
+    <div class="footer">AIVIDIO &mdash; AI Video Automation</div>
 </div>
 </body></html>
 """,
@@ -148,6 +186,14 @@ def _render_html(event: str, title: str, message: str, data: dict | None = None)
 
     extra_parts: list[str] = []
     if data:
+        if "reset_url" in data:
+            extra_parts.append(
+                f'<p style="margin-top:16px; text-align:center;"><a class="btn" href="{data["reset_url"]}">Reset Password</a></p>'
+            )
+        if "billing_url" in data:
+            extra_parts.append(
+                f'<p style="margin-top:16px; text-align:center;"><a class="btn" href="{data["billing_url"]}">Update Payment Method</a></p>'
+            )
         if "youtube_url" in data:
             extra_parts.append(
                 f'<p style="margin-top:16px;"><a class="btn" href="{data["youtube_url"]}">View on YouTube</a></p>'
@@ -181,22 +227,22 @@ def _render_html(event: str, title: str, message: str, data: dict | None = None)
 class EmailNotifier:
     """Send email notifications via Resend API or SMTP fallback.
 
-    Reads configuration from environment variables (prefixed VIDMATION_).
+    Reads configuration from environment variables (prefixed AIVIDIO_).
     """
 
     def __init__(self) -> None:
-        self.provider = os.getenv("VIDMATION_EMAIL_PROVIDER", "resend").lower()
-        self.from_address = os.getenv("VIDMATION_EMAIL_FROM", "noreply@aividio.io")
+        self.provider = os.getenv("AIVIDIO_EMAIL_PROVIDER", "resend").lower()
+        self.from_address = os.getenv("AIVIDIO_EMAIL_FROM", "noreply@aividio.io")
         self.to_addresses = [
             addr.strip()
-            for addr in os.getenv("VIDMATION_EMAIL_TO", "").split(",")
+            for addr in os.getenv("AIVIDIO_EMAIL_TO", "").split(",")
             if addr.strip()
         ]
-        self._resend_api_key = os.getenv("VIDMATION_RESEND_API_KEY", "")
-        self._smtp_host = os.getenv("VIDMATION_SMTP_HOST", "")
-        self._smtp_port = int(os.getenv("VIDMATION_SMTP_PORT", "587"))
-        self._smtp_user = os.getenv("VIDMATION_SMTP_USER", "")
-        self._smtp_password = os.getenv("VIDMATION_SMTP_PASSWORD", "")
+        self._resend_api_key = os.getenv("AIVIDIO_RESEND_API_KEY", "")
+        self._smtp_host = os.getenv("AIVIDIO_SMTP_HOST", "")
+        self._smtp_port = int(os.getenv("AIVIDIO_SMTP_PORT", "587"))
+        self._smtp_user = os.getenv("AIVIDIO_SMTP_USER", "")
+        self._smtp_password = os.getenv("AIVIDIO_SMTP_PASSWORD", "")
 
     @property
     def is_configured(self) -> bool:
@@ -233,10 +279,55 @@ class EmailNotifier:
             logger.error("Failed to send email notification", exc_info=True)
             return False
 
-    def _send_resend(self, subject: str, html_body: str) -> bool:
+    @property
+    def can_send_transactional(self) -> bool:
+        """Check if the notifier can send transactional emails (to arbitrary recipients)."""
+        if self.provider == "resend":
+            return bool(self._resend_api_key)
+        return bool(self._smtp_host)
+
+    def send_to(
+        self,
+        to: str | list[str],
+        subject: str,
+        event: str,
+        title: str,
+        message: str,
+        data: dict | None = None,
+    ) -> bool:
+        """Send a transactional email to a specific recipient.
+
+        Unlike ``send()``, this does not require ``AIVIDIO_EMAIL_TO`` to be
+        configured — the recipient is passed explicitly.
+
+        Returns True on success, False on failure.
+        """
+        if not self.can_send_transactional:
+            logger.debug("Email provider not configured, skipping transactional email")
+            return False
+
+        recipients = [to] if isinstance(to, str) else to
+        html_body = _render_html(event, title, message, data)
+
+        try:
+            if self.provider == "resend":
+                return self._send_resend(subject, html_body, recipients)
+            else:
+                return self._send_smtp(subject, html_body, recipients)
+        except Exception:
+            logger.error("Failed to send transactional email to %s", recipients, exc_info=True)
+            return False
+
+    def _send_resend(
+        self,
+        subject: str,
+        html_body: str,
+        recipients: list[str] | None = None,
+    ) -> bool:
         """Send via Resend HTTP API."""
         import httpx
 
+        to = recipients or self.to_addresses
         response = httpx.post(
             "https://api.resend.com/emails",
             headers={
@@ -245,14 +336,14 @@ class EmailNotifier:
             },
             json={
                 "from": self.from_address,
-                "to": self.to_addresses,
-                "subject": f"[VIDMATION] {subject}",
+                "to": to,
+                "subject": f"[AIVIDIO] {subject}",
                 "html": html_body,
             },
             timeout=15.0,
         )
         if response.status_code in (200, 201):
-            logger.info("Email sent via Resend to %s", self.to_addresses)
+            logger.info("Email sent via Resend to %s", to)
             return True
 
         logger.error(
@@ -260,12 +351,18 @@ class EmailNotifier:
         )
         return False
 
-    def _send_smtp(self, subject: str, html_body: str) -> bool:
+    def _send_smtp(
+        self,
+        subject: str,
+        html_body: str,
+        recipients: list[str] | None = None,
+    ) -> bool:
         """Send via SMTP (TLS)."""
+        to = recipients or self.to_addresses
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[VIDMATION] {subject}"
+        msg["Subject"] = f"[AIVIDIO] {subject}"
         msg["From"] = self.from_address
-        msg["To"] = ", ".join(self.to_addresses)
+        msg["To"] = ", ".join(to)
         msg.attach(MIMEText(html_body, "html"))
 
         with smtplib.SMTP(self._smtp_host, self._smtp_port) as server:
@@ -274,7 +371,46 @@ class EmailNotifier:
             server.ehlo()
             if self._smtp_user:
                 server.login(self._smtp_user, self._smtp_password)
-            server.sendmail(self.from_address, self.to_addresses, msg.as_string())
+            server.sendmail(self.from_address, to, msg.as_string())
 
-        logger.info("Email sent via SMTP to %s", self.to_addresses)
+        logger.info("Email sent via SMTP to %s", to)
         return True
+
+
+# ---------------------------------------------------------------------------
+# Transactional email helpers
+# ---------------------------------------------------------------------------
+
+
+def send_password_reset_email(to: str, reset_url: str) -> bool:
+    """Send a password reset email to a user."""
+    notifier = EmailNotifier()
+    return notifier.send_to(
+        to=to,
+        subject="Reset Your Password",
+        event="password_reset",
+        title="Password Reset Request",
+        message=(
+            "We received a request to reset your password. "
+            "Click the button below to choose a new password. "
+            "This link expires in 1 hour."
+        ),
+        data={"reset_url": reset_url},
+    )
+
+
+def send_payment_failed_email(to: str, billing_url: str = "https://aividio.com/billing") -> bool:
+    """Send a dunning email when a payment fails."""
+    notifier = EmailNotifier()
+    return notifier.send_to(
+        to=to,
+        subject="Payment Failed - Action Required",
+        event="payment_failed",
+        title="Payment Failed",
+        message=(
+            "We were unable to process your latest payment. "
+            "Please update your payment method to continue using AIVIDIO. "
+            "Your subscription will remain active for a grace period."
+        ),
+        data={"billing_url": billing_url},
+    )

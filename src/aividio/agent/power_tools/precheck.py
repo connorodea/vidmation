@@ -233,7 +233,7 @@ def get_imagemagick_formats() -> list[str]:
 def preflight_report() -> str:
     """Generate a human-readable report of tool availability."""
     tools = check_all_tools()
-    lines = ["VIDMATION Power Tools -- Pre-flight Check", "=" * 50, ""]
+    lines = ["AIVIDIO Power Tools -- Pre-flight Check", "=" * 50, ""]
 
     # Core tools first.
     lines.append("CORE TOOLS (required):")

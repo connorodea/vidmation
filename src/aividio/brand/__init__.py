@@ -1,4 +1,4 @@
-"""Brand kit and template system for VIDMATION.
+"""Brand kit and template system for AIVIDIO.
 
 Submodules:
 - kit: :class:`BrandKit` dataclass for logos, colors, fonts, intros/outros.

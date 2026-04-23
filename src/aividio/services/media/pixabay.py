@@ -25,7 +25,7 @@ class PixabayMediaProvider(MediaProvider):
         if not api_key:
             raise ValueError(
                 "pixabay_api_key is not configured. "
-                "Set VIDMATION_PIXABAY_API_KEY in your environment."
+                "Set AIVIDIO_PIXABAY_API_KEY in your environment."
             )
         self._api_key = api_key
         self._http = httpx.Client(

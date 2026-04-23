@@ -49,7 +49,7 @@ class VoiceCloner:
         if not api_key:
             raise ValueError(
                 "elevenlabs_api_key is not configured. "
-                "Set VIDMATION_ELEVENLABS_API_KEY in your environment."
+                "Set AIVIDIO_ELEVENLABS_API_KEY in your environment."
             )
         return ElevenLabs(api_key=api_key)
 
@@ -65,7 +65,7 @@ class VoiceCloner:
         if not api_token:
             raise ValueError(
                 "replicate_api_token is not configured. "
-                "Set VIDMATION_REPLICATE_API_TOKEN in your environment."
+                "Set AIVIDIO_REPLICATE_API_TOKEN in your environment."
             )
         return replicate.Client(api_token=api_token)
 

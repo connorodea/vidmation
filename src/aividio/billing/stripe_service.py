@@ -24,7 +24,7 @@ class StripeService:
         key = settings.stripe_secret_key.get_secret_value()
         if not key:
             raise RuntimeError(
-                "VIDMATION_STRIPE_SECRET_KEY is not configured. "
+                "AIVIDIO_STRIPE_SECRET_KEY is not configured. "
                 "Set it in .env or the environment before using billing features."
             )
         stripe.api_key = key
@@ -134,7 +134,7 @@ class StripeService:
         settings = get_settings()
         webhook_secret = settings.stripe_webhook_secret.get_secret_value()
         if not webhook_secret:
-            raise RuntimeError("VIDMATION_STRIPE_WEBHOOK_SECRET is not configured")
+            raise RuntimeError("AIVIDIO_STRIPE_WEBHOOK_SECRET is not configured")
 
         try:
             event = stripe.Webhook.construct_event(payload, signature, webhook_secret)
@@ -330,7 +330,10 @@ class StripeService:
             db.commit()
             logger.warning("Payment failed for user %s — marked past_due", user.id[:8])
 
-            # TODO: send dunning email via Resend
+            # Send dunning email
+            from aividio.notifications.email import send_payment_failed_email
+
+            send_payment_failed_email(to=user.email)
         except Exception:
             db.rollback()
             logger.exception("Failed to process invoice.payment_failed")

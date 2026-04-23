@@ -1,1 +1,1 @@
-"""Utility modules for VIDMATION."""
+"""Utility modules for AIVIDIO."""

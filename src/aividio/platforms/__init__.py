@@ -1,4 +1,4 @@
-"""Multi-platform export support for VIDMATION.
+"""Multi-platform export support for AIVIDIO.
 
 Submodules:
 - base: Abstract base class defining the platform interface.

@@ -1,4 +1,4 @@
-"""Structured logging setup for VIDMATION."""
+"""Structured logging setup for AIVIDIO."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """Discord webhook notifier — sends embed-formatted messages.
 
 Configuration:
-    VIDMATION_DISCORD_WEBHOOK_URL: full Discord webhook URL
+    AIVIDIO_DISCORD_WEBHOOK_URL: full Discord webhook URL
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ class DiscordNotifier:
     """
 
     def __init__(self) -> None:
-        self.webhook_url = os.getenv("VIDMATION_DISCORD_WEBHOOK_URL", "")
+        self.webhook_url = os.getenv("AIVIDIO_DISCORD_WEBHOOK_URL", "")
 
     @property
     def is_configured(self) -> bool:
@@ -65,7 +65,7 @@ class DiscordNotifier:
 
         embed = self._build_embed(event, title, message, data)
         payload: dict[str, Any] = {
-            "username": "VIDMATION",
+            "username": "AIVIDIO",
             "avatar_url": "https://aividio.io/static/images/logo.png",
             "embeds": [embed],
         }
@@ -108,7 +108,7 @@ class DiscordNotifier:
             "description": message,
             "color": colour,
             "footer": {
-                "text": f"VIDMATION | Event: {event}",
+                "text": f"AIVIDIO | Event: {event}",
             },
         }
 

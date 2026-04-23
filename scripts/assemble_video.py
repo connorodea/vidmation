@@ -10,7 +10,7 @@ TOPIC = "5 Signs You Are Experiencing a Spiritual Awakening"
 TARGET_MINUTES = 8
 WORK = Path("data/work/production")
 OUTPUT = Path("output/spiritual_awakening_production.mp4")
-PEXELS_KEY = os.environ.get("VIDMATION_PEXELS_API_KEY", "")
+PEXELS_KEY = os.environ.get("AIVIDIO_PEXELS_API_KEY", "")
 FPS = 30
 MUSIC_VOL = 0.12
 WORK.mkdir(parents=True, exist_ok=True)
@@ -27,7 +27,7 @@ def srt_ts(t):
     return f"{int(t//3600):02d}:{int((t%3600)//60):02d}:{int(t%60):02d},{int((t%1)*1000):03d}"
 
 print("="*60)
-print("  VIDMATION Production Pipeline")
+print("  AIVIDIO Production Pipeline")
 print("="*60)
 t0 = time.time()
 

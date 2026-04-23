@@ -1,6 +1,6 @@
 """Complete tool registry for the AI Agent.
 
-Maps every VIDMATION capability to a Claude tool_use compatible definition.
+Maps every AIVIDIO capability to a Claude tool_use compatible definition.
 Each tool has: name, description, input_schema (JSON Schema), and an executor function.
 
 Categories:
@@ -64,7 +64,7 @@ class ToolDefinition:
 class ToolRegistry:
     """Central registry of all tools available to the AI agent.
 
-    On initialisation, every service in the VIDMATION codebase is registered
+    On initialisation, every service in the AIVIDIO codebase is registered
     as a callable tool with a JSON-Schema input definition and an executor
     function that catches exceptions and returns a string result suitable for
     Claude's ``tool_result`` content block.

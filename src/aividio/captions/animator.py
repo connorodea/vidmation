@@ -290,7 +290,7 @@ class CaptionAnimator:
         # Build the main Default style
         header = dedent(f"""\
             [Script Info]
-            Title: VIDMATION Animated Captions
+            Title: AIVIDIO Animated Captions
             ScriptType: v4.00+
             PlayResX: {width}
             PlayResY: {height}

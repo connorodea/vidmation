@@ -42,7 +42,7 @@ _MAX_TURNS = 30
 _MODEL = "claude-sonnet-4-20250514"
 
 POWER_TOOLS_SYSTEM_PROMPT = """\
-You are VIDMATION's Power Tools Agent -- a specialized media manipulation expert
+You are AIVIDIO's Power Tools Agent -- a specialized media manipulation expert
 with direct access to command-line tools.
 
 You can execute any of the following CLI tools to transform images, video, and audio:

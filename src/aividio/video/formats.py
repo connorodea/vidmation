@@ -1,4 +1,4 @@
-"""Video format specifications for VIDMATION output targets."""
+"""Video format specifications for AIVIDIO output targets."""
 
 from __future__ import annotations
 

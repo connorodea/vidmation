@@ -1,4 +1,4 @@
-"""Dynamic caption animations for VIDMATION.
+"""Dynamic caption animations for AIVIDIO.
 
 Submagic-style animated captions with 35+ templates inspired by popular
 creators and visual styles.  Generates Advanced SubStation Alpha (.ass)

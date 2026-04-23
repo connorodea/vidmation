@@ -25,7 +25,7 @@ class PexelsMediaProvider(MediaProvider):
         if not api_key:
             raise ValueError(
                 "pexels_api_key is not configured. "
-                "Set VIDMATION_PEXELS_API_KEY in your environment."
+                "Set AIVIDIO_PEXELS_API_KEY in your environment."
             )
         self._api_key = api_key
         self._http = httpx.Client(

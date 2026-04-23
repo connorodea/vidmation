@@ -1,4 +1,4 @@
-"""MCP Server connector architecture for VIDMATION.
+"""MCP Server connector architecture for AIVIDIO.
 
 Allows the AI agent to connect to external MCP (Model Context Protocol) servers
 for additional capabilities beyond the built-in tool registry.
@@ -12,7 +12,7 @@ Future MCP servers could include:
 
 MCP is Anthropic's open protocol for connecting AI models to external tools and
 data sources.  This module provides the connector layer that discovers tools from
-MCP servers and registers them into the VIDMATION :class:`ToolRegistry` so they
+MCP servers and registers them into the AIVIDIO :class:`ToolRegistry` so they
 are callable alongside the native tools.
 
 Architecture:
@@ -156,7 +156,7 @@ class MCPConnector:
 
         self._server_tools[config.name] = tools
 
-        # Register each discovered tool into the VIDMATION tool registry
+        # Register each discovered tool into the AIVIDIO tool registry
         imported = 0
         for tool in tools:
             self._register_mcp_tool(tool)
@@ -491,7 +491,7 @@ KNOWN_MCP_SERVERS: dict[str, MCPServerConfig] = {
     "database": MCPServerConfig(
         name="database",
         url="",
-        description="Direct SQL access to the VIDMATION database",
+        description="Direct SQL access to the AIVIDIO database",
         capabilities=["query", "execute", "list_tables", "describe_table"],
         transport="stdio",
         command="npx",

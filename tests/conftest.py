@@ -1,4 +1,4 @@
-"""Shared test fixtures for VIDMATION."""
+"""Shared test fixtures for AIVIDIO."""
 
 import os
 import tempfile

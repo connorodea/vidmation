@@ -81,7 +81,7 @@ class FalVideoGenerator(VideoGenerator):
         if not fal_key:
             raise ValueError(
                 "fal_key is not configured. "
-                "Set VIDMATION_FAL_KEY in your environment."
+                "Set AIVIDIO_FAL_KEY in your environment."
             )
         # fal_client reads FAL_KEY from the environment.
         import os

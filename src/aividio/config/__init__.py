@@ -1,4 +1,4 @@
-"""Configuration system for VIDMATION."""
+"""Configuration system for AIVIDIO."""
 
 from aividio.config.profiles import ChannelProfile, load_profile
 from aividio.config.settings import Settings, get_settings

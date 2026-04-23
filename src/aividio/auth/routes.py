@@ -477,16 +477,18 @@ async def forgot_password(body: ForgotPasswordRequest, request: Request):
             user.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
             db.commit()
 
-            # TODO: Send email via Resend
-            # from aividio.notifications.email import send_password_reset_email
-            # await send_password_reset_email(
-            #     to=user.email,
-            #     reset_url=f"https://aividio.com/reset-password?token={raw_token}",
-            # )
-            logger.info(
-                "Password reset requested for %s (token generated, email sending not yet implemented)",
-                user.email,
-            )
+            # Send password reset email via Resend
+            from aividio.notifications.email import send_password_reset_email
+
+            reset_url = f"https://aividio.com/reset-password?token={raw_token}"
+            sent = send_password_reset_email(to=user.email, reset_url=reset_url)
+            if sent:
+                logger.info("Password reset email sent to %s", user.email)
+            else:
+                logger.warning(
+                    "Password reset token generated for %s but email delivery failed",
+                    user.email,
+                )
 
         # Always return success to prevent user enumeration
         return MessageResponse(

@@ -1,4 +1,4 @@
-"""Main video assembly engine for VIDMATION.
+"""Main video assembly engine for AIVIDIO.
 
 Orchestrates clip fitting, transitions, audio mixing, caption burn-in,
 and final encoding into a single cohesive video file.

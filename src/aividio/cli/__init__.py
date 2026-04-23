@@ -1,1 +1,1 @@
-"""VIDMATION CLI — command-line interface powered by Typer + Rich."""
+"""AIVIDIO CLI — command-line interface powered by Typer + Rich."""

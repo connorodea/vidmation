@@ -22,10 +22,10 @@ from aividio.config.settings import Settings
 class TestSettings:
     def test_settings_loads_defaults(self, monkeypatch):
         # Prevent .env file from overriding code defaults
-        monkeypatch.delenv("VIDMATION_DEFAULT_LLM_PROVIDER", raising=False)
-        monkeypatch.delenv("VIDMATION_DEFAULT_TTS_PROVIDER", raising=False)
-        monkeypatch.delenv("VIDMATION_DEFAULT_IMAGE_PROVIDER", raising=False)
-        monkeypatch.delenv("VIDMATION_DEFAULT_VIDEO_FORMAT", raising=False)
+        monkeypatch.delenv("AIVIDIO_DEFAULT_LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("AIVIDIO_DEFAULT_TTS_PROVIDER", raising=False)
+        monkeypatch.delenv("AIVIDIO_DEFAULT_IMAGE_PROVIDER", raising=False)
+        monkeypatch.delenv("AIVIDIO_DEFAULT_VIDEO_FORMAT", raising=False)
         settings = Settings(_env_file=None)
         assert settings.database_url == "sqlite:///data/aividio.db"
         assert settings.web_port == 8000

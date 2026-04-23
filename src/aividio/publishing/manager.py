@@ -172,10 +172,10 @@ class PublishManager:
 
             # Check for TikTok credentials
             import os
-            tiktok_access_token = os.getenv("VIDMATION_TIKTOK_ACCESS_TOKEN", "")
+            tiktok_access_token = os.getenv("AIVIDIO_TIKTOK_ACCESS_TOKEN", "")
             if not tiktok_access_token:
                 raise NotImplementedError(
-                    "TikTok publishing requires VIDMATION_TIKTOK_ACCESS_TOKEN. "
+                    "TikTok publishing requires AIVIDIO_TIKTOK_ACCESS_TOKEN. "
                     "Set up TikTok Content Publishing API credentials first."
                 )
 
@@ -253,23 +253,23 @@ class PublishManager:
                 raise ValueError(f"Video '{video_id}' has no rendered file")
 
             import os
-            ig_access_token = os.getenv("VIDMATION_INSTAGRAM_ACCESS_TOKEN", "")
-            ig_account_id = os.getenv("VIDMATION_INSTAGRAM_ACCOUNT_ID", "")
+            ig_access_token = os.getenv("AIVIDIO_INSTAGRAM_ACCESS_TOKEN", "")
+            ig_account_id = os.getenv("AIVIDIO_INSTAGRAM_ACCOUNT_ID", "")
 
             if not ig_access_token or not ig_account_id:
                 raise NotImplementedError(
-                    "Instagram publishing requires VIDMATION_INSTAGRAM_ACCESS_TOKEN and "
-                    "VIDMATION_INSTAGRAM_ACCOUNT_ID. Set up Meta Graph API credentials first."
+                    "Instagram publishing requires AIVIDIO_INSTAGRAM_ACCESS_TOKEN and "
+                    "AIVIDIO_INSTAGRAM_ACCOUNT_ID. Set up Meta Graph API credentials first."
                 )
 
             import httpx
 
             # The video must be hosted at a public URL for Instagram's API.
             # In production, this would upload to a CDN/S3 first.
-            video_url = os.getenv("VIDMATION_PUBLIC_BASE_URL", "")
+            video_url = os.getenv("AIVIDIO_PUBLIC_BASE_URL", "")
             if not video_url:
                 raise NotImplementedError(
-                    "Instagram publishing requires VIDMATION_PUBLIC_BASE_URL to serve "
+                    "Instagram publishing requires AIVIDIO_PUBLIC_BASE_URL to serve "
                     "video files publicly. Configure a CDN or public file server."
                 )
 

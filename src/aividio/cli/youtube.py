@@ -62,7 +62,7 @@ def youtube_setup(
 
     console.print(header(
         "YouTube API Setup",
-        subtitle="Connect VIDMATION to your YouTube channel.\n"
+        subtitle="Connect AIVIDIO to your YouTube channel.\n"
         "You need a Google Cloud project with the YouTube Data API v3 enabled.",
     ))
 

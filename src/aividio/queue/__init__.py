@@ -1,4 +1,4 @@
-"""Job queue system for VIDMATION — worker, task helpers, and scheduler."""
+"""Job queue system for AIVIDIO — worker, task helpers, and scheduler."""
 
 from aividio.queue.tasks import enqueue_video
 from aividio.queue.worker import JobWorker

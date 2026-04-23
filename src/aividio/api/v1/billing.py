@@ -76,7 +76,7 @@ def _price_id_for(plan: str, interval: str) -> str:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"No Stripe price configured for {plan}/{interval}. "
-            f"Set VIDMATION_{key.upper()} in your environment.",
+            f"Set AIVIDIO_{key.upper()} in your environment.",
         )
     return price_id
 

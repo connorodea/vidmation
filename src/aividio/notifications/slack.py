@@ -1,7 +1,7 @@
 """Slack webhook notifier — sends Block Kit formatted messages.
 
 Configuration:
-    VIDMATION_SLACK_WEBHOOK_URL: full Slack incoming webhook URL
+    AIVIDIO_SLACK_WEBHOOK_URL: full Slack incoming webhook URL
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class SlackNotifier:
     """
 
     def __init__(self) -> None:
-        self.webhook_url = os.getenv("VIDMATION_SLACK_WEBHOOK_URL", "")
+        self.webhook_url = os.getenv("AIVIDIO_SLACK_WEBHOOK_URL", "")
 
     @property
     def is_configured(self) -> bool:
@@ -176,7 +176,7 @@ class SlackNotifier:
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f":zap: *VIDMATION* | Event: `{event}`",
+                    "text": f":zap: *AIVIDIO* | Event: `{event}`",
                 }
             ],
         })

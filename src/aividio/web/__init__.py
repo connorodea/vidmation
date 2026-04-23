@@ -1,1 +1,1 @@
-"""VIDMATION web dashboard."""
+"""AIVIDIO web dashboard."""

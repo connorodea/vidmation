@@ -320,7 +320,7 @@ class BatchVideoGenerator:
         if not api_key:
             raise ValueError(
                 "anthropic_api_key is required for topic generation. "
-                "Set VIDMATION_ANTHROPIC_API_KEY in your environment."
+                "Set AIVIDIO_ANTHROPIC_API_KEY in your environment."
             )
 
         client = anthropic.Anthropic(api_key=api_key)

@@ -141,7 +141,7 @@ def _build_ass_header(style: dict) -> str:
     # ASS header template
     return dedent(f"""\
         [Script Info]
-        Title: VIDMATION Captions
+        Title: AIVIDIO Captions
         ScriptType: v4.00+
         PlayResX: 1920
         PlayResY: 1080

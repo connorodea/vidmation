@@ -56,7 +56,7 @@ class ElevenLabsTTS(TTSProvider):
         if not api_key:
             raise ValueError(
                 "elevenlabs_api_key is not configured. "
-                "Set VIDMATION_ELEVENLABS_API_KEY in your environment."
+                "Set AIVIDIO_ELEVENLABS_API_KEY in your environment."
             )
         self._client = ElevenLabs(api_key=api_key)
 

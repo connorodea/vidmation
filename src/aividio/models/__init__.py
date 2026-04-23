@@ -1,4 +1,4 @@
-"""Database models for VIDMATION."""
+"""Database models for AIVIDIO."""
 
 from aividio.models.analytics import (
     CostSummary,

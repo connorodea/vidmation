@@ -1,4 +1,4 @@
-"""Multi-channel notification system for VIDMATION.
+"""Multi-channel notification system for AIVIDIO.
 
 Supports email (Resend/SMTP), Discord webhooks, Slack webhooks,
 and in-app notifications stored in the database.
