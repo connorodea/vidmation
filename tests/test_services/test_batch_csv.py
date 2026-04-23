@@ -2,7 +2,7 @@
 
 import pytest
 
-from vidmation.batch.csv_parser import BatchCSVParser, BatchRow
+from aividio.batch.csv_parser import BatchCSVParser, BatchRow
 
 
 @pytest.fixture

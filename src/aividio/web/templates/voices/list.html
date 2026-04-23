@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Voices - AIVIDIO{% endblock %}
+{% block nav_voices %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Voices</span>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="voiceLibrary()">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Voice Library</h1>
+            <p class="mt-1 text-sm text-[#666]">Manage stock and cloned voices across all providers</p>
+        </div>
+        <a href="/voices/new" class="inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Clone Voice
+        </a>
+    </div>
+
+    {# Filters #}
+    <div class="flex items-center gap-3">
+        <form method="get" action="/voices" class="flex items-center gap-3">
+            <select name="provider" onchange="this.form.submit()" class="rounded-xl bg-[#1a1a1a] border border-white/[0.08] px-3 py-2 text-xs text-[#999] focus:outline-none focus:border-[#10a37f]">
+                <option value="">All Providers</option>
+                <option value="elevenlabs" {% if filter_provider == 'elevenlabs' %}selected{% endif %}>ElevenLabs</option>
+                <option value="replicate" {% if filter_provider == 'replicate' %}selected{% endif %}>Replicate</option>
+                <option value="fal" {% if filter_provider == 'fal' %}selected{% endif %}>fal.ai</option>
+            </select>
+            <select name="cloned" onchange="this.form.submit()" class="rounded-xl bg-[#1a1a1a] border border-white/[0.08] px-3 py-2 text-xs text-[#999] focus:outline-none focus:border-[#10a37f]">
+                <option value="">All Types</option>
+                <option value="true" {% if filter_cloned == 'true' %}selected{% endif %}>Cloned</option>
+                <option value="false" {% if filter_cloned == 'false' %}selected{% endif %}>Stock</option>
+            </select>
+        </form>
+        <span class="text-xs text-[#666]">{{ voices|length }} voice{{ 's' if voices|length != 1 else '' }}</span>
+    </div>
+
+    {% if voices %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for voice in voices %}
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-5 hover:border-white/[0.15] transition-colors group" x-data="{ playing: false, loading: false }">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-lg flex items-center justify-center {% if voice.is_cloned %}bg-purple-500/10{% else %}bg-[#10a37f]/10{% endif %}">
+                        <svg class="w-4 h-4 {% if voice.is_cloned %}text-purple-400{% else %}text-[#10a37f]{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-[#ececec]">{{ voice.name }}</h3>
+                        <p class="text-[11px] text-[#666]">{{ voice.provider }}</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="relative">
+                    <button @click="open = !open" class="p-1 rounded text-[#666] hover:text-[#999] opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                    </button>
+                    <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-1 w-36 rounded-xl bg-[#2a2a2a] border border-white/[0.08] shadow-lg z-10 py-1">
+                        <button @click="generatePreview('{{ voice.id }}'); open = false" class="w-full text-left px-3 py-1.5 text-xs text-[#999] hover:text-white hover:bg-white/[0.04]">Generate Preview</button>
+                        <button @click="deleteVoice('{{ voice.id }}', '{{ voice.name }}')" x-show="'{{ voice.is_cloned }}' === 'True'" class="w-full text-left px-3 py-1.5 text-xs text-[#ef4444] hover:bg-[#ef4444]/10">Delete</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5 mb-3">
+                {% if voice.is_cloned %}
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-400">Cloned</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.06] text-[#666]">Stock</span>
+                {% endif %}
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.06] text-[#666]">Used {{ voice.usage_count }}x</span>
+            </div>
+
+            {% if voice.description %}
+            <p class="text-[11px] text-[#666] mb-3 line-clamp-2">{{ voice.description }}</p>
+            {% endif %}
+
+            <div class="flex items-center gap-2">
+                {% if voice.preview_path %}
+                <button @click="togglePlay($refs.audio_{{ loop.index }})" class="flex items-center justify-center h-7 w-7 rounded-full bg-[#10a37f] hover:bg-[#1a7f64] text-white transition-colors">
+                    <template x-if="!playing"><svg class="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></template>
+                    <template x-if="playing"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></template>
+                </button>
+                <audio x-ref="audio_{{ loop.index }}" src="/voices/{{ voice.id }}/preview" @ended="playing = false" @play="playing = true" @pause="playing = false" preload="none"></audio>
+                <div class="flex-1 h-0.5 bg-white/[0.06] rounded-full"></div>
+                {% else %}
+                <button @click="generatePreview('{{ voice.id }}')" :disabled="loading" class="text-[11px] text-[#666] hover:text-[#999] transition-colors">
+                    <span x-show="!loading">Generate preview...</span>
+                    <span x-show="loading" x-cloak>Generating...</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] px-6 py-16 text-center">
+        <p class="text-sm text-[#999]">No voices yet</p>
+        <p class="mt-1 text-xs text-[#666]">Clone a voice from audio samples or sync from your providers</p>
+        <a href="/voices/new" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors">Clone Voice</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function voiceLibrary() {
+    return {
+        togglePlay(audioEl) {
+            if (audioEl.paused) {
+                document.querySelectorAll('audio').forEach(a => { if (a !== audioEl) a.pause(); });
+                audioEl.play();
+            } else { audioEl.pause(); }
+        },
+        async generatePreview(voiceId) {
+            try {
+                const resp = await fetch(`/voices/${voiceId}/preview`, { method: 'POST' });
+                if (resp.ok) { window.location.reload(); } else { const data = await resp.json(); alert(data.error || 'Preview generation failed'); }
+            } catch (err) { alert('Preview generation failed: ' + err.message); }
+        },
+        async deleteVoice(voiceId, voiceName) {
+            if (!confirm(`Delete voice "${voiceName}"?`)) return;
+            try {
+                const resp = await fetch(`/voices/${voiceId}`, { method: 'DELETE' });
+                if (resp.ok) { window.location.reload(); } else { const data = await resp.json(); alert(data.error || 'Delete failed'); }
+            } catch (err) { alert('Delete failed: ' + err.message); }
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1 @@
+"""AIVIDIO web dashboard."""

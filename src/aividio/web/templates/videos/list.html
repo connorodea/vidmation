@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Videos - AIVIDIO{% endblock %}
+{% block nav_videos %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Videos</span>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Videos</h1>
+        <a href="/videos/new" class="inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors duration-150">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Video
+        </a>
+    </div>
+
+    {# Status Filters #}
+    <div class="flex gap-1.5">
+        <a href="/videos" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 {% if not current_status %}bg-white/[0.08] text-white{% else %}text-[#666] hover:text-[#999] hover:bg-white/[0.04]{% endif %}">All</a>
+        {% for status in statuses %}
+        <a href="/videos?status={{ status }}" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 {% if current_status == status %}bg-white/[0.08] text-white{% else %}text-[#666] hover:text-[#999] hover:bg-white/[0.04]{% endif %}">{{ status|title }}</a>
+        {% endfor %}
+    </div>
+
+    {# Video Table #}
+    {% if videos %}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-white/[0.06]">
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Title</th>
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Channel</th>
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Format</th>
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Duration</th>
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for video in videos %}
+                <tr class="border-t border-white/[0.04] hover:bg-white/[0.02] cursor-pointer transition-colors duration-100" onclick="window.location='/videos/{{ video.id }}'">
+                    <td class="px-6 py-3.5 font-medium text-[#ececec]">{{ video.title or video.topic_prompt[:50] }}</td>
+                    <td class="px-6 py-3.5 text-[#666]">{{ video.channel.name }}</td>
+                    <td class="px-6 py-3.5">
+                        <span class="text-xs text-[#999]">{{ video.format.value }}</span>
+                    </td>
+                    <td class="px-6 py-3.5 text-[#666]">
+                        {% if video.duration_seconds %}
+                            {{ (video.duration_seconds // 60)|int }}:{{ '%02d' % (video.duration_seconds % 60)|int }}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="px-6 py-3.5">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full
+                                {% if video.status.value == 'uploaded' %}bg-[#10a37f]
+                                {% elif video.status.value == 'generating' %}bg-[#6366f1]
+                                {% elif video.status.value == 'failed' %}bg-[#ef4444]
+                                {% elif video.status.value == 'ready' %}bg-[#f59e0b]
+                                {% else %}bg-[#666]{% endif %}
+                                {% if video.status.value == 'generating' %}pulse-dot{% endif %}"></span>
+                            <span class="text-xs text-[#999]">{{ video.status.value }}</span>
+                        </span>
+                    </td>
+                    <td class="px-6 py-3.5 text-[#666] text-xs">{{ video.created_at.strftime('%b %d, %H:%M') if video.created_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] px-6 py-16 text-center">
+        <p class="text-sm text-[#999]">No videos found</p>
+        <p class="mt-1 text-xs text-[#666]">Create your first AI-generated video</p>
+        <a href="/videos/new" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors">Create Video</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

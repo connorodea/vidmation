@@ -5,8 +5,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-import vidmation.models  # noqa: F401 — ensure all models are registered for autogenerate
-from vidmation.models.base import Base
+import aividio.models  # noqa: F401 — ensure all models are registered for autogenerate
+from aividio.models.base import Base
 
 config = context.config
 if config.config_file_name is not None:

@@ -2,9 +2,9 @@
 
 import pytest
 
-from vidmation.db.repos import ChannelRepo, JobRepo, VideoRepo
-from vidmation.models.job import JobStatus, JobType
-from vidmation.models.video import VideoFormat, VideoStatus
+from aividio.db.repos import ChannelRepo, JobRepo, VideoRepo
+from aividio.models.job import JobStatus, JobType
+from aividio.models.video import VideoFormat, VideoStatus
 
 
 class TestChannelRepo:

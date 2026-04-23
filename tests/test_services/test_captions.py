@@ -2,8 +2,8 @@
 
 import pytest
 
-from vidmation.captions.animator import CaptionAnimator
-from vidmation.captions.templates import (
+from aividio.captions.animator import CaptionAnimator
+from aividio.captions.templates import (
     TEMPLATES,
     CaptionTemplate,
     create_custom_template,

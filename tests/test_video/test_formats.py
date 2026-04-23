@@ -2,7 +2,7 @@
 
 import pytest
 
-from vidmation.video.formats import (
+from aividio.video.formats import (
     FORMAT_REGISTRY,
     LANDSCAPE,
     PORTRAIT,

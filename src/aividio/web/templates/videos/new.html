@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}New Video - AIVIDIO{% endblock %}
+{% block nav_videos %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<a href="/videos" class="text-[#666] hover:text-[#999] transition-colors">Videos</a>
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">New Video</span>
+{% endblock %}
+
+{% block content %}
+<div x-data="videoCreator()" class="max-w-3xl mx-auto space-y-8">
+
+    {# ===== HEADER ===== #}
+    <div class="text-center">
+        <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Create a Video</h1>
+        <p class="mt-2 text-sm text-[#666]">Describe your topic and let AI handle the rest</p>
+    </div>
+
+    {# ===== FORM ===== #}
+    <form method="post" action="/videos/new" @submit="onSubmit($event)">
+        <input type="hidden" name="workflow" :value="workflow">
+
+        <div class="space-y-6">
+
+            {# --- TOPIC INPUT (Hero) --- #}
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6 hover:border-white/[0.15] transition-colors duration-150">
+                <div class="flex items-center justify-between mb-3">
+                    <label for="topic" class="text-sm font-semibold text-white">Topic</label>
+                    <button type="button"
+                            @click="suggestTopics()"
+                            :disabled="loadingSuggestions"
+                            class="inline-flex items-center gap-1.5 text-xs text-[#10a37f] hover:text-[#1a7f64] transition-colors disabled:opacity-50">
+                        <svg class="w-3.5 h-3.5" :class="loadingSuggestions ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        <span x-text="loadingSuggestions ? 'Thinking...' : 'Suggest Topics'"></span>
+                    </button>
+                </div>
+                <textarea
+                    id="topic"
+                    name="topic"
+                    rows="3"
+                    required
+                    x-model="topic"
+                    placeholder="e.g., 7 signs you are experiencing a spiritual awakening"
+                    class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3.5 text-[#ececec] placeholder-[#444] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none transition-all duration-150 text-[15px] leading-relaxed resize-none"
+                ></textarea>
+                <p class="mt-2 text-[11px] text-[#666]">Be specific. AI will generate script, voiceover, visuals, and a publish-ready video.</p>
+
+                {# AI Topic Suggestions #}
+                <div x-show="suggestions.length > 0" x-transition class="mt-4 space-y-1.5">
+                    <p class="text-[11px] font-medium text-[#666] uppercase tracking-wider mb-2">Suggestions</p>
+                    <template x-for="(suggestion, idx) in suggestions" :key="idx">
+                        <button type="button"
+                                @click="topic = suggestion"
+                                class="w-full text-left rounded-lg px-4 py-2.5 text-sm text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors duration-150">
+                            <span x-text="suggestion"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            {# --- CHANNEL --- #}
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <label class="block text-sm font-semibold text-white mb-4">Channel</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {% for channel in channels %}
+                    <label class="cursor-pointer group">
+                        <input type="radio" name="channel_id" value="{{ channel.id }}" {% if loop.first %}checked{% endif %} class="peer hidden" x-model="channelId">
+                        <div class="rounded-xl border border-white/[0.08] p-4 peer-checked:border-[#10a37f]/50 peer-checked:bg-[#10a37f]/[0.06] hover:border-white/[0.15] transition-all duration-150">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-lg bg-[#10a37f]/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-[#10a37f] font-semibold text-sm">{{ channel.name[0]|upper }}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-[#ececec] truncate">{{ channel.name }}</p>
+                                    <p class="text-[11px] text-[#666] truncate">{{ channel.profile_path or 'Default profile' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+
+                    {% if not channels %}
+                    <div class="sm:col-span-2 rounded-xl bg-white/[0.02] border border-white/[0.06] p-6 text-center">
+                        <p class="text-sm text-[#666]">No channels available</p>
+                        <a href="/channels/new" class="mt-2 inline-flex items-center gap-1.5 text-xs text-[#10a37f] hover:text-[#1a7f64]">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Create a channel first
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# --- FORMAT --- #}
+            <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                <label class="block text-sm font-semibold text-white mb-4">Format</label>
+                <div class="grid grid-cols-3 gap-3">
+                    {% for fmt in formats %}
+                    <label class="cursor-pointer group">
+                        <input type="radio" name="format" value="{{ fmt }}" {% if fmt == 'landscape' %}checked{% endif %} class="peer hidden" x-model="format">
+                        <div class="rounded-xl border border-white/[0.08] p-5 text-center peer-checked:border-[#10a37f]/50 peer-checked:bg-[#10a37f]/[0.06] hover:border-white/[0.15] transition-all duration-150">
+                            <div class="mx-auto mb-3 rounded border border-white/[0.1] flex items-center justify-center
+                                {% if fmt == 'landscape' %}w-14 h-8
+                                {% elif fmt == 'portrait' %}w-8 h-14
+                                {% else %}w-8 h-14{% endif %}">
+                                <svg class="w-3 h-3 text-[#666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium text-[#ececec] capitalize">{{ fmt }}</p>
+                            <p class="text-[11px] text-[#666] mt-0.5">
+                                {% if fmt == 'landscape' %}1920 x 1080
+                                {% elif fmt == 'portrait' %}1080 x 1920
+                                {% else %}1080 x 1920{% endif %}
+                            </p>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {# --- ADVANCED OPTIONS (collapsed) --- #}
+            <div x-data="{ showAdvanced: false }">
+                <button type="button" @click="showAdvanced = !showAdvanced"
+                        class="flex items-center gap-2 text-xs text-[#666] hover:text-[#999] transition-colors duration-150 mb-4">
+                    <svg class="w-3.5 h-3.5 transition-transform duration-150" :class="showAdvanced ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    Advanced Options
+                </button>
+
+                <div x-show="showAdvanced" x-transition x-cloak class="space-y-4">
+                    {# Voice Settings #}
+                    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6 space-y-4">
+                        <h3 class="text-sm font-semibold text-white">Voice & Audio</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-[#666] mb-2">Voice Provider</label>
+                                <select name="voice_provider" x-model="voiceProvider"
+                                        class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3 text-sm text-[#ececec] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none transition-all">
+                                    <option value="elevenlabs">ElevenLabs</option>
+                                    <option value="openai">OpenAI TTS</option>
+                                    <option value="edge">Edge TTS (Free)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-[#666] mb-2">Background Music</label>
+                                <select name="music_style"
+                                        class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3 text-sm text-[#ececec] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none transition-all">
+                                    <option value="ambient">Ambient</option>
+                                    <option value="cinematic">Cinematic</option>
+                                    <option value="upbeat">Upbeat</option>
+                                    <option value="none">No Music</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Visual Style #}
+                    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6 space-y-4">
+                        <h3 class="text-sm font-semibold text-white">Visual Style</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-[#666] mb-2">Image Source</label>
+                                <select name="image_source"
+                                        class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3 text-sm text-[#ececec] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none transition-all">
+                                    <option value="stock">Stock Photos (Pexels)</option>
+                                    <option value="ai">AI Generated (DALL-E)</option>
+                                    <option value="mixed">Mixed</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-[#666] mb-2">Caption Style</label>
+                                <select name="caption_style"
+                                        class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3 text-sm text-[#ececec] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none transition-all">
+                                    <option value="word_highlight">Word Highlight</option>
+                                    <option value="sentence">Sentence</option>
+                                    <option value="karaoke">Karaoke</option>
+                                    <option value="none">No Captions</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Scheduling #}
+                    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6 space-y-4">
+                        <h3 class="text-sm font-semibold text-white">Publishing</h3>
+                        <div class="flex items-center gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="auto_upload" value="true" checked class="text-[#10a37f] focus:ring-[#10a37f]/40">
+                                <span class="text-sm text-[#999]">Upload immediately</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="auto_upload" value="false" class="text-[#10a37f] focus:ring-[#10a37f]/40">
+                                <span class="text-sm text-[#999]">Review first</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# --- BATCH INPUT --- #}
+            <div x-show="workflow === 'batch'" x-transition x-cloak>
+                <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+                    <label class="block text-sm font-semibold text-white mb-3">Batch Topics</label>
+                    <textarea
+                        name="batch_topics"
+                        rows="6"
+                        placeholder="Enter one topic per line..."
+                        class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3.5 text-[#ececec] placeholder-[#444] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none transition-all text-sm leading-relaxed resize-none font-mono"
+                    ></textarea>
+                    <p class="mt-2 text-[11px] text-[#666]">One topic per line. Each queued as a separate job.</p>
+                </div>
+            </div>
+
+            {# --- GENERATE BUTTON --- #}
+            <div class="flex items-center gap-3 pt-2">
+                <button type="submit"
+                        :disabled="submitting"
+                        class="flex-1 rounded-xl bg-[#10a37f] px-6 py-3.5 text-sm font-semibold text-white hover:bg-[#1a7f64] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <svg x-show="submitting" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="submitting ? 'Generating...' : (workflow === 'batch' ? 'Queue All Videos' : 'Generate Video')"></span>
+                </button>
+                <a href="/videos"
+                   class="rounded-xl border border-white/[0.08] px-6 py-3.5 text-sm font-medium text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors duration-150">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function videoCreator() {
+    return {
+        workflow: new URLSearchParams(window.location.search).get('mode') || 'quick',
+        topic: '',
+        channelId: '',
+        format: 'landscape',
+        voiceProvider: 'elevenlabs',
+        template: 'default',
+        submitting: false,
+        loadingSuggestions: false,
+        suggestions: [],
+        currentStep: 0,
+        steps: ['Topic', 'Channel', 'Format', 'Options'],
+
+        costEstimate: {
+            script: 0.03,
+            voice: 0.08,
+            images: 0.15,
+            music: 0.00,
+            total: 0.26,
+        },
+
+        onSubmit(event) {
+            if (!this.topic.trim() && this.workflow !== 'batch') {
+                event.preventDefault();
+                return;
+            }
+            this.submitting = true;
+        },
+
+        async suggestTopics() {
+            this.loadingSuggestions = true;
+            try {
+                const resp = await fetch('/api/videos/suggest-topics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel_id: this.channelId, current_topic: this.topic })
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.suggestions = data.topics || [];
+                }
+            } catch (err) {
+                console.error('Failed to fetch suggestions:', err);
+            } finally {
+                this.loadingSuggestions = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

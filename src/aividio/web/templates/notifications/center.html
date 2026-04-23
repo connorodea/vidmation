@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Notifications - AIVIDIO{% endblock %}
+{% block nav_notifications %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Notifications</span>
+{% endblock %}
+
+{% block content %}
+<div x-data="notificationCenter()" class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Notifications</h1>
+            <p class="mt-1 text-sm text-[#666]">
+                {% if unread_count > 0 %}<span class="text-[#10a37f] font-medium">{{ unread_count }}</span> unread{% else %}All caught up{% endif %}
+            </p>
+        </div>
+        {% if unread_count > 0 %}
+        <button hx-post="/api/notifications/read-all" hx-swap="none" hx-on::after-request="window.location.reload()" class="rounded-xl border border-white/[0.08] px-4 py-2.5 text-sm font-medium text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors">Mark All Read</button>
+        {% endif %}
+    </div>
+
+    {# Filters #}
+    <div class="flex items-center gap-1.5 flex-wrap">
+        <a href="/notifications" class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors {{ 'bg-[#10a37f] text-white' if not current_filter or current_filter == 'all' else 'bg-white/[0.04] text-[#666] hover:text-[#999] border border-white/[0.06]' }}">All</a>
+        <a href="/notifications?filter=unread" class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors {{ 'bg-[#10a37f] text-white' if current_filter == 'unread' else 'bg-white/[0.04] text-[#666] hover:text-[#999] border border-white/[0.06]' }}">
+            Unread{% if unread_count > 0 %} <span class="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full bg-[#10a37f]/20 text-[#10a37f] text-[10px] font-bold px-1">{{ unread_count }}</span>{% endif %}
+        </a>
+        {% for etype in event_types %}
+        <a href="/notifications?filter={{ etype }}" class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors {{ 'bg-[#10a37f] text-white' if current_filter == etype else 'bg-white/[0.04] text-[#666] hover:text-[#999] border border-white/[0.06]' }}">{{ etype.replace("_", " ").title() }}</a>
+        {% endfor %}
+    </div>
+
+    {# Notification List #}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] overflow-hidden">
+        {% if notifications %}
+        <div class="divide-y divide-white/[0.04]">
+            {% for notif in notifications %}
+            <div class="group flex items-start gap-4 px-6 py-4 transition-colors {{ 'bg-white/[0.01]' if notif.is_read else 'bg-[#10a37f]/[0.02]' }} hover:bg-white/[0.03]" id="notif-{{ notif.id }}">
+                {% set event_colours = {
+                    "video_complete": "text-[#10a37f] bg-[#10a37f]/10",
+                    "job_failed": "text-[#ef4444] bg-[#ef4444]/10",
+                    "upload_complete": "text-[#6366f1] bg-[#6366f1]/10",
+                    "batch_complete": "text-blue-400 bg-blue-500/10",
+                    "cost_alert": "text-[#f59e0b] bg-[#f59e0b]/10",
+                    "schedule_fired": "text-purple-400 bg-purple-500/10",
+                    "publish_complete": "text-teal-400 bg-teal-500/10"
+                } %}
+                {% set colour_class = event_colours.get(notif.event, "text-[#666] bg-white/[0.06]") %}
+                <div class="flex-shrink-0 mt-0.5 flex items-center justify-center w-8 h-8 rounded-lg {{ colour_class }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium {{ 'text-white' if not notif.is_read else 'text-[#999]' }}">{{ notif.title }}</p>
+                        {% if not notif.is_read %}<span class="w-1.5 h-1.5 rounded-full bg-[#10a37f] flex-shrink-0"></span>{% endif %}
+                    </div>
+                    <p class="mt-0.5 text-xs text-[#666] line-clamp-2">{{ notif.message }}</p>
+                    <span class="mt-1 text-[10px] text-[#666] block">{{ notif.created_at.strftime("%b %d at %H:%M") if notif.created_at else "" }}</span>
+                </div>
+                {% if not notif.is_read %}
+                <button hx-post="/api/notifications/{{ notif.id }}/read" hx-swap="none" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg p-1.5 text-[#666] hover:text-[#10a37f] hover:bg-[#10a37f]/10" title="Mark as read">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/></svg>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-16 text-center">
+            <p class="text-sm text-[#999]">No notifications</p>
+            <p class="mt-1 text-xs text-[#666]">
+                {% if current_filter == "unread" %}All read.{% elif current_filter and current_filter not in ("all", "unread") %}No {{ current_filter.replace("_", " ") }} notifications.{% else %}Events will appear here.{% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function notificationCenter() {
+    return { init() { setInterval(() => { htmx.ajax('GET', '/api/notifications/badge', '#notif-badge-target'); }, 30000); } };
+}
+</script>
+{% endblock %}

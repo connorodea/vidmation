@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Clone Voice - AIVIDIO{% endblock %}
+{% block nav_voices %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<a href="/voices" class="text-[#666] hover:text-[#999] transition-colors">Voices</a>
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Clone</span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6" x-data="voiceCloneForm()">
+    <div>
+        <a href="/voices" class="text-xs text-[#666] hover:text-[#999] transition-colors">Back to Voice Library</a>
+        <h1 class="mt-2 text-2xl font-bold tracking-[-0.01em] text-white">Clone a Voice</h1>
+        <p class="mt-1 text-sm text-[#666]">Upload audio samples to create a custom voice clone</p>
+    </div>
+
+    {% if error %}
+    <div class="rounded-xl bg-[#ef4444]/5 border border-[#ef4444]/20 px-4 py-3 flex items-center gap-2">
+        <svg class="w-4 h-4 text-[#ef4444] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <p class="text-sm text-[#ef4444]">{{ error }}</p>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/voices/clone" enctype="multipart/form-data" class="space-y-5">
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6 space-y-5">
+            <div>
+                <label for="name" class="block text-sm font-medium text-[#999] mb-2">Voice Name</label>
+                <input type="text" name="name" id="name" required value="{{ name|default('', true) }}" placeholder="e.g., Documentary Narrator" class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3 text-sm text-[#ececec] placeholder-[#444] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none">
+            </div>
+            <div>
+                <label for="description" class="block text-sm font-medium text-[#999] mb-2">Description <span class="text-[#666]">(optional)</span></label>
+                <textarea name="description" id="description" rows="2" placeholder="Tone, accent, pace..." class="w-full rounded-xl bg-[#0d0d0d] border border-white/[0.08] px-4 py-3 text-sm text-[#ececec] placeholder-[#444] focus:border-[#10a37f] focus:ring-1 focus:ring-[#10a37f]/20 focus:outline-none">{{ description|default('', true) }}</textarea>
+            </div>
+        </div>
+
+        {# Provider #}
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <label class="block text-sm font-medium text-[#999] mb-3">Provider</label>
+            <div class="grid grid-cols-3 gap-3">
+                <label class="cursor-pointer">
+                    <input type="radio" name="provider" value="elevenlabs" x-model="provider" class="peer sr-only" checked>
+                    <div class="rounded-xl border border-white/[0.08] p-4 text-center peer-checked:border-[#10a37f]/50 peer-checked:bg-[#10a37f]/[0.06] hover:border-white/[0.15] transition-colors">
+                        <p class="text-sm font-medium text-[#ececec]">ElevenLabs</p>
+                        <p class="text-[11px] text-[#666] mt-0.5">Best quality</p>
+                    </div>
+                </label>
+                <label class="cursor-pointer">
+                    <input type="radio" name="provider" value="replicate" x-model="provider" class="peer sr-only">
+                    <div class="rounded-xl border border-white/[0.08] p-4 text-center peer-checked:border-[#10a37f]/50 peer-checked:bg-[#10a37f]/[0.06] hover:border-white/[0.15] transition-colors">
+                        <p class="text-sm font-medium text-[#ececec]">Replicate</p>
+                        <p class="text-[11px] text-[#666] mt-0.5">XTTS-v2</p>
+                    </div>
+                </label>
+                <label class="cursor-pointer">
+                    <input type="radio" name="provider" value="fal" x-model="provider" class="peer sr-only">
+                    <div class="rounded-xl border border-white/[0.08] p-4 text-center peer-checked:border-[#10a37f]/50 peer-checked:bg-[#10a37f]/[0.06] hover:border-white/[0.15] transition-colors">
+                        <p class="text-sm font-medium text-[#ececec]">fal.ai</p>
+                        <p class="text-[11px] text-[#666] mt-0.5">F5-TTS</p>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        {# Upload #}
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <label class="block text-sm font-medium text-[#999] mb-3">Audio Samples</label>
+            <div class="rounded-xl border-2 border-dashed border-white/[0.08] p-8 text-center transition-colors"
+                 :class="{ 'border-[#10a37f]/30 bg-[#10a37f]/[0.03]': dragging }"
+                 @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
+                <svg class="mx-auto w-8 h-8 text-[#666] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-sm text-[#999] mb-1">Drag and drop audio files</p>
+                <p class="text-xs text-[#666] mb-3">WAV or MP3, at least 10 seconds of clean speech</p>
+                <label class="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-white/[0.06] border border-white/[0.08] px-4 py-2 text-sm text-[#999] hover:bg-white/[0.1] transition-colors">
+                    Browse Files
+                    <input type="file" name="samples" multiple accept="audio/*" class="sr-only" @change="handleFiles($event.target.files)">
+                </label>
+            </div>
+            <template x-if="files.length > 0">
+                <div class="mt-3 space-y-1.5">
+                    <template x-for="(file, index) in files" :key="index">
+                        <div class="flex items-center justify-between rounded-lg bg-white/[0.04] px-3 py-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-3.5 h-3.5 text-[#666]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                <span class="text-xs text-[#999]" x-text="file.name"></span>
+                                <span class="text-[10px] text-[#666]" x-text="formatSize(file.size)"></span>
+                            </div>
+                            <button type="button" @click="removeFile(index)" class="text-[#666] hover:text-[#ef4444] transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <div class="flex items-center justify-end gap-3">
+            <a href="/voices" class="rounded-xl px-4 py-2.5 text-sm font-medium text-[#666] hover:text-[#999] transition-colors">Cancel</a>
+            <button type="submit" :disabled="submitting || files.length === 0" class="inline-flex items-center gap-2 rounded-xl bg-[#10a37f] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#1a7f64] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <template x-if="!submitting"><span>Clone Voice</span></template>
+                <template x-if="submitting"><span>Cloning...</span></template>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function voiceCloneForm() {
+    return {
+        provider: '{{ provider|default("elevenlabs", true) }}',
+        files: [], dragging: false, submitting: false,
+        handleDrop(event) { this.dragging = false; this.addFiles(event.dataTransfer.files); },
+        handleFiles(fileList) { this.addFiles(fileList); },
+        addFiles(fileList) { for (let i = 0; i < fileList.length; i++) { const f = fileList[i]; if (f.type.startsWith('audio/') || f.name.match(/\.(wav|mp3|m4a|ogg|flac|aac)$/i)) this.files.push(f); } this.updateFileInput(); },
+        removeFile(index) { this.files.splice(index, 1); this.updateFileInput(); },
+        updateFileInput() { const dt = new DataTransfer(); this.files.forEach(f => dt.items.add(f)); const input = document.querySelector('input[name="samples"]'); if (input) input.files = dt.files; },
+        formatSize(bytes) { if (bytes < 1024) return bytes + ' B'; if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'; return (bytes / 1048576).toFixed(1) + ' MB'; },
+        init() { this.$el.closest('form')?.addEventListener('submit', () => { this.submitting = true; }); }
+    };
+}
+</script>
+{% endblock %}

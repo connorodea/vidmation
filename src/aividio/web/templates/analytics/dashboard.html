@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Analytics - AIVIDIO{% endblock %}
+{% block nav_analytics %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">Analytics</span>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    {# Header #}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-[32px] font-bold tracking-[-0.01em] text-white">Analytics</h1>
+            <p class="mt-1 text-sm text-[#666]">Cost monitoring and usage tracking</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="/analytics/costs" class="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors">Costs</a>
+            <a href="/analytics/performance" class="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors">Performance</a>
+        </div>
+    </div>
+
+    {# Stats #}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Spend This Month</p>
+            <p class="mt-3 text-3xl font-bold text-white">${{ "%.2f"|format(monthly_cost) }}</p>
+            <p class="mt-1 text-xs text-[#666]">{{ monthly_calls }} API calls</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Spend Today</p>
+            <p class="mt-3 text-3xl font-bold text-[#10a37f]">${{ "%.2f"|format(today_cost) }}</p>
+            <p class="mt-1 text-xs text-[#666]">{{ today_calls }} API calls</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Cost per Video</p>
+            <p class="mt-3 text-3xl font-bold text-white">${{ "%.2f"|format(cost_per_video_avg) }}</p>
+            <p class="mt-1 text-xs text-[#666]">Average</p>
+        </div>
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <p class="text-xs font-medium text-[#666] uppercase tracking-wider">Active Services</p>
+            <p class="mt-3 text-3xl font-bold text-white">{{ by_service|length }}</p>
+        </div>
+    </div>
+
+    {# Chart #}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+        <h3 class="text-sm font-semibold text-white mb-4">Daily Cost (Last 30 Days)</h3>
+        <div class="relative" style="height: 280px;">
+            <canvas id="dailyCostChart"></canvas>
+        </div>
+    </div>
+
+    {# Service Breakdown #}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] overflow-hidden">
+        <div class="px-6 py-4 border-b border-white/[0.06]">
+            <h3 class="text-sm font-semibold text-white">Service Usage This Month</h3>
+        </div>
+        {% if by_service %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-white/[0.06]">
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Service</th>
+                    <th class="px-6 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Calls</th>
+                    <th class="px-6 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Tokens</th>
+                    <th class="px-6 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Duration</th>
+                    <th class="px-6 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, data in by_service.items() %}
+                <tr class="border-t border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td class="px-6 py-3">
+                        <span class="inline-flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full
+                                {% if 'claude' in name %}bg-purple-500
+                                {% elif 'openai' in name or 'dalle' in name %}bg-green-500
+                                {% elif 'elevenlabs' in name %}bg-blue-500
+                                {% elif 'replicate' in name %}bg-orange-500
+                                {% elif 'fal' in name %}bg-pink-500
+                                {% elif 'pexels' in name or 'pixabay' in name %}bg-teal-500
+                                {% elif 'whisper' in name %}bg-yellow-500
+                                {% else %}bg-[#666]{% endif %}
+                            "></span>
+                            <span class="font-medium text-[#ececec]">{{ name }}</span>
+                        </span>
+                    </td>
+                    <td class="px-6 py-3 text-right text-[#999]">{{ "{:,}".format(data.calls) }}</td>
+                    <td class="px-6 py-3 text-right text-[#999]">{{ "{:,}".format(data.tokens) if data.tokens else '-' }}</td>
+                    <td class="px-6 py-3 text-right text-[#999]">{{ "%.1f"|format(data.duration_seconds) }}s</td>
+                    <td class="px-6 py-3 text-right font-medium text-white">${{ "%.4f"|format(data.cost_usd) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="border-t border-white/[0.06]">
+                    <td class="px-6 py-3 font-medium text-[#999]">Total</td>
+                    <td class="px-6 py-3 text-right font-medium text-[#999]">{{ "{:,}".format(monthly_calls) }}</td>
+                    <td class="px-6 py-3"></td>
+                    <td class="px-6 py-3"></td>
+                    <td class="px-6 py-3 text-right font-bold text-white">${{ "%.4f"|format(monthly_cost) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <div class="px-6 py-12 text-center text-[#666] text-sm">
+            No usage data yet. Start generating videos to see analytics.
+        </div>
+        {% endif %}
+    </div>
+
+    {# Most Expensive Videos #}
+    {% if top_expensive_videos %}
+    <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] overflow-hidden">
+        <div class="px-6 py-4 border-b border-white/[0.06]">
+            <h3 class="text-sm font-semibold text-white">Most Expensive Videos</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-white/[0.06]">
+                    <th class="px-6 py-3 text-left text-[11px] font-medium text-[#666] uppercase tracking-wider">Video</th>
+                    <th class="px-6 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">API Calls</th>
+                    <th class="px-6 py-3 text-right text-[11px] font-medium text-[#666] uppercase tracking-wider">Total Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in top_expensive_videos %}
+                <tr class="border-t border-white/[0.04] hover:bg-white/[0.02] cursor-pointer transition-colors" onclick="window.location='/videos/{{ v.video_id }}'">
+                    <td class="px-6 py-3 font-medium text-[#ececec]">{{ v.title }}</td>
+                    <td class="px-6 py-3 text-right text-[#999]">{{ v.calls }}</td>
+                    <td class="px-6 py-3 text-right font-medium text-white">${{ "%.4f"|format(v.cost_usd) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+    Chart.defaults.color = '#666666';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.04)';
+
+    const dailyData = {{ daily_trend | tojson }};
+    const dailyLabels = dailyData.map(d => d.date.slice(5));
+    const dailyCosts = dailyData.map(d => d.cost_usd);
+
+    new Chart(document.getElementById('dailyCostChart'), {
+        type: 'line',
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                label: 'Daily Cost ($)',
+                data: dailyCosts,
+                borderColor: '#10a37f',
+                backgroundColor: 'rgba(16,163,127,0.08)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 1.5,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: '#10a37f',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1a1a',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    borderWidth: 1,
+                    titleColor: '#ececec',
+                    bodyColor: '#999999',
+                    cornerRadius: 8,
+                    padding: 12,
+                    callbacks: {
+                        label: (ctx) => `$${ctx.parsed.y.toFixed(4)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { maxTicksLimit: 10 }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    ticks: {
+                        callback: (v) => '$' + v.toFixed(2)
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

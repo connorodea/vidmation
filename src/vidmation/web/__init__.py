@@ -1,1 +1,0 @@
-"""VIDMATION web dashboard."""

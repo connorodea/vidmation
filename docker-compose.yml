@@ -15,7 +15,7 @@ services:
 
   worker:
     build: .
-    command: ["python", "-m", "vidmation", "worker"]
+    command: ["python", "-m", "aividio", "worker"]
     volumes:
       - ./data:/app/data
       - ./output:/app/output

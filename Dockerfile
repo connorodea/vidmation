@@ -21,4 +21,4 @@ RUN mkdir -p data output assets/fonts assets/music channel_profiles
 EXPOSE 8000
 
 # Default: run web server
-CMD ["uvicorn", "vidmation.web.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "aividio.web.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

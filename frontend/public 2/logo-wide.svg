@@ -1,0 +1,20 @@
+<svg width="180" height="44" viewBox="0 0 180 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon -->
+  <rect width="44" height="44" rx="12" fill="url(#wideGrad)"/>
+  <text x="22" y="30" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="22" fill="white" letter-spacing="-1">Ai</text>
+  <rect width="44" height="44" rx="12" fill="url(#wideGlow)"/>
+
+  <!-- Wordmark -->
+  <text x="56" y="30" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="24" fill="#fafafa" letter-spacing="-0.5">AIVidio</text>
+
+  <defs>
+    <linearGradient id="wideGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10a37f"/>
+      <stop offset="100%" stop-color="#0d8c6d"/>
+    </linearGradient>
+    <radialGradient id="wideGlow" cx="30%" cy="25%" r="60%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

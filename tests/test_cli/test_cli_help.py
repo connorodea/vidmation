@@ -2,16 +2,16 @@
 
 from typer.testing import CliRunner
 
-from vidmation.cli.app import app
+from aividio.cli.app import app
 
 runner = CliRunner()
 
 
 class TestCLIHelp:
-    def test_vidmation_help_exits_0(self):
+    def test_aividio_help_exits_0(self):
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "vidmation" in result.output.lower() or "AI-powered" in result.output
+        assert "aividio" in result.output.lower() or "AI-powered" in result.output
 
     def test_generate_help_exits_0(self):
         result = runner.invoke(app, ["generate", "--help"])

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.id[:8] }} - AIVIDIO{% endblock %}
+{% block nav_jobs %}bg-white/[0.06] text-white{% endblock %}
+
+{% block breadcrumb %}
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<a href="/jobs" class="text-[#666] hover:text-[#999] transition-colors">Jobs</a>
+<svg class="w-4 h-4 text-[#444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+<span class="text-[#ececec] font-medium">{{ job.id[:8] }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <a href="/jobs" class="inline-flex items-center gap-1 text-xs text-[#666] hover:text-[#999] transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to Jobs
+    </a>
+
+    <div>
+        <h1 class="text-2xl font-bold tracking-[-0.01em] text-white">Job {{ job.id[:8] }}</h1>
+        <p class="mt-1 text-xs text-[#666]">{{ job.job_type.value|replace('_', ' ')|title }}</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4"
+         {% if job.status.value == 'running' %}
+         hx-get="/api/jobs/{{ job.id }}/progress"
+         hx-trigger="every 2s"
+         hx-target="#live-progress"
+         {% endif %}>
+
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-4">Progress</h3>
+            <div id="live-progress" class="space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full
+                            {% if job.status.value == 'completed' %}bg-[#10a37f]
+                            {% elif job.status.value == 'running' %}bg-[#6366f1] pulse-dot
+                            {% elif job.status.value == 'failed' %}bg-[#ef4444]
+                            {% elif job.status.value == 'queued' %}bg-[#f59e0b]
+                            {% else %}bg-[#666]{% endif %}"></span>
+                        <span class="text-xs font-medium text-[#999] uppercase">{{ job.status.value }}</span>
+                    </span>
+                    <span class="text-sm text-[#ececec]">{{ job.current_stage or 'Waiting...' }}</span>
+                </div>
+                <div class="w-full bg-white/[0.06] rounded-full h-1.5">
+                    <div class="bg-[#10a37f] h-1.5 rounded-full progress-bar" style="width: {{ job.progress_pct }}%"></div>
+                </div>
+                <p class="text-sm text-[#666]">{{ job.progress_pct }}% complete</p>
+            </div>
+        </div>
+
+        <div class="rounded-2xl bg-[#1a1a1a] border border-white/[0.08] p-6">
+            <h3 class="text-xs font-medium text-[#666] uppercase tracking-wider mb-4">Details</h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between"><span class="text-[#666]">Job ID</span><span class="text-[#ececec] font-mono text-xs">{{ job.id }}</span></div>
+                <div class="flex justify-between"><span class="text-[#666]">Type</span><span class="text-[#ececec]">{{ job.job_type.value }}</span></div>
+                <div class="flex justify-between"><span class="text-[#666]">Started</span><span class="text-[#ececec]">{{ job.started_at.strftime('%b %d %H:%M:%S') if job.started_at else '-' }}</span></div>
+                <div class="flex justify-between"><span class="text-[#666]">Completed</span><span class="text-[#ececec]">{{ job.completed_at.strftime('%b %d %H:%M:%S') if job.completed_at else '-' }}</span></div>
+            </div>
+            <div class="flex gap-2 mt-5">
+                {% if job.status.value in ['queued', 'running'] %}
+                <button hx-post="/api/jobs/{{ job.id }}/cancel" class="rounded-xl bg-[#ef4444]/10 border border-[#ef4444]/20 px-4 py-2 text-sm text-[#ef4444] hover:bg-[#ef4444]/15 transition-colors">Cancel</button>
+                {% elif job.status.value == 'failed' %}
+                <button hx-post="/api/jobs/{{ job.id }}/retry" class="rounded-xl bg-[#10a37f] px-4 py-2 text-sm text-white hover:bg-[#1a7f64] transition-colors">Retry</button>
+                {% endif %}
+                <a href="/videos/{{ job.video_id }}" class="rounded-xl border border-white/[0.08] px-4 py-2 text-sm text-[#999] hover:text-white hover:bg-white/[0.04] transition-colors">View Video</a>
+            </div>
+        </div>
+    </div>
+
+    {% if job.error_detail %}
+    <div class="rounded-2xl bg-[#ef4444]/5 border border-[#ef4444]/20 p-6">
+        <h3 class="text-xs font-medium text-[#ef4444] uppercase tracking-wider mb-3">Error Details</h3>
+        <pre class="text-xs text-[#ef4444]/80 font-mono whitespace-pre-wrap leading-relaxed">{{ job.error_detail }}</pre>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
